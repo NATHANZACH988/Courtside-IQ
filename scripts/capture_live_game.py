@@ -23,6 +23,7 @@ from research.coaching.pbp import (
 )
 from research.coaching.rotations import leave_one_out_accuracy, predict_replacements
 from research.coaching.schemas import FatigueProxy, GameStateBundle, PlayerGrade
+from research.integrity import validate_completed_capture
 from research.providers.espn import (
     LiveFetchError,
     fetch_game_summary,
@@ -120,6 +121,13 @@ def main() -> int:
         ),
         "players": players,
     }
+
+    # Do not persist partial or temporally inconsistent captures as finals.
+    try:
+        validate_completed_capture(fixture)
+    except ValueError as exc:
+        print(f"SKIP completed-game capture: {exc}", file=sys.stderr)
+        return 2
 
     subs = extract_substitutions(game_id, doc.payload)
     fouls = extract_foul_states(game_id, doc.payload)
