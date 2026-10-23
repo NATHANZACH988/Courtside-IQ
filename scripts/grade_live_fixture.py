@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run prediction→grading vertical slice against a live-captured fixture.
 
-Demonstrates Priority-tonight milestone with real completed-game box scores.
-Predictions are illustrative (house AI = baseline; sample humans nearby).
+Retrospective *hindsight-only* mechanics demonstration using final box scores.
+NOT a point-in-time forecast, pregame baseline, or valid skill/backtest result.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 from arena.db import Database
 from arena.service import ArenaService
+from research.integrity import validate_completed_capture
 
 
 def main() -> int:
@@ -28,10 +29,18 @@ def main() -> int:
             ROOT / "fixtures" / "box_scores" / "live_captures" / "401909848.json"
         ),
     )
+    parser.add_argument(
+        "--retrospective-demo", action="store_true",
+        help="Explicitly allow hindsight-only simulation; NEVER count as real forecasting",
+    )
     args = parser.parse_args()
+    if not args.retrospective_demo:
+        parser.error("Requires --retrospective-demo: final-game outcomes are used to build fake pretip picks and baselines")
     fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
-    if not fixture.get("source_url") or not fixture.get("fetched_at_utc"):
-        raise SystemExit("Fixture missing provenance")
+    try:
+        validate_completed_capture(fixture)
+    except ValueError as exc:
+        raise SystemExit(f"Invalid completed-game fixture: {exc}") from exc
 
     tip = datetime.fromisoformat(fixture["scheduled_tipoff_utc"].replace("Z", "+00:00"))
     # Clock starts before tip so submissions are legal, then advances past tip.
@@ -117,6 +126,9 @@ def main() -> int:
     print(
         json.dumps(
             {
+                "mode": "retrospective_hindsight_demo",
+                "eligible_for_backtest": False,
+                "warning": "Players, baselines and human guesses were chosen using final outcomes; these scores are not predictions.",
                 "fixture_id": fixture["fixture_id"],
                 "source_url": fixture["source_url"],
                 "fetched_at_utc": fixture["fetched_at_utc"],
