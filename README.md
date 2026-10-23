@@ -38,4 +38,15 @@ PYTHONPATH=. python -m unittest discover -s arena/tests -p 'test_*.py' -v
 PYTHONPATH=. python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-This README does **not** mean the product is deployed or that live NBA ingestion is configured.
+### Live data (beta research)
+
+```bash
+PYTHONPATH=. python3 scripts/capture_live_game.py --event-id 401909848
+PYTHONPATH=. python3 scripts/grade_live_fixture.py
+```
+
+Tonight’s completed CHI@MIL final was captured with source URL + fetch timestamp under
+`fixtures/box_scores/live_captures/`. NBA.com CDN may 403; ESPN public JSON is used for
+research captures. **Commercial rights are unverified — do not deploy publicly without review.**
+
+This README does **not** mean the product is deployed.

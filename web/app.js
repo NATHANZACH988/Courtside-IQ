@@ -24,6 +24,11 @@
     audit: document.getElementById("audit-box"),
     seedDemo: document.getElementById("btn-seed-demo"),
     settleDemo: document.getElementById("btn-settle-demo"),
+    refreshTonight: document.getElementById("btn-refresh-tonight"),
+    tonightGames: document.getElementById("tonight-games"),
+    loadCoaching: document.getElementById("btn-load-coaching"),
+    coachingEvent: document.getElementById("coaching-event"),
+    coachingBox: document.getElementById("coaching-box"),
   };
 
   async function api(path, options = {}) {
@@ -349,6 +354,63 @@
       if (first) await showAudit(first.id);
     } catch (err) {
       alert(err.message);
+    }
+  });
+
+  el.refreshTonight.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/research/tonight");
+      el.tonightGames.innerHTML = "";
+      if (data.skipped) {
+        el.tonightGames.innerHTML = `<li class="fineprint">Skipped: ${escapeHtml(data.reason)}</li>`;
+        return;
+      }
+      const meta = document.createElement("li");
+      meta.className = "fineprint";
+      meta.textContent = `Source ${data.source_url} · fetched ${data.fetched_at_utc}`;
+      el.tonightGames.appendChild(meta);
+      for (const g of data.games || []) {
+        const li = document.createElement("li");
+        const score = (g.teams || [])
+          .map((t) => `${t.abbr || "?"} ${t.score ?? ""}`)
+          .join(" — ");
+        li.innerHTML = `
+          <div><strong>${escapeHtml(g.short_name || g.name || g.event_id)}</strong>
+            ${g.completed ? '<span class="status-final"> Final</span>' : ""}
+          </div>
+          <div class="fineprint">${escapeHtml(score)} · ${escapeHtml(g.detail || g.status || "")}</div>
+        `;
+        el.tonightGames.appendChild(li);
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  el.loadCoaching.addEventListener("click", async () => {
+    const id = el.coachingEvent.value.trim();
+    if (!id) return;
+    try {
+      const data = await api(`/api/research/coaching/${id}`);
+      const bundle = data.bundle || {};
+      const summary = {
+        provenance: bundle.provenance,
+        substitution_count: (bundle.substitutions || []).length,
+        foul_event_count: (bundle.foul_events || []).length,
+        hot_cold: (bundle.hot_cold || []).filter((h) => h.label !== "neutral").slice(0, 8),
+        top_grades: (bundle.grades || [])
+          .slice()
+          .sort((a, b) => b.box_outcome_grade - a.box_outcome_grade)
+          .slice(0, 5),
+        rotation_forecasts: (data.rotation_forecasts || []).map((f) => ({
+          team_id: f.team_id,
+          top: (f.predictions || []).slice(0, 5),
+        })),
+        loo_diagnostic: data.loo_diagnostic,
+      };
+      el.coachingBox.textContent = JSON.stringify(summary, null, 2);
+    } catch (err) {
+      el.coachingBox.textContent = err.message;
     }
   });
 

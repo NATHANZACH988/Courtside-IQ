@@ -257,6 +257,71 @@ def make_handler(service: ArenaService, static_root: str | None = None) -> type:
                 self._ok({"locked": count})
                 return
 
+            if method == "GET" and path == "/api/research/tonight":
+                # Live scoreboard snapshot with provenance (skip-safe for clients)
+                try:
+                    from research.providers.espn import fetch_scoreboard
+
+                    doc = fetch_scoreboard()
+                    games = []
+                    for ev in doc.payload.get("events") or []:
+                        comp = (ev.get("competitions") or [{}])[0]
+                        status = (comp.get("status") or {}).get("type") or {}
+                        teams = comp.get("competitors") or []
+                        games.append(
+                            {
+                                "event_id": ev.get("id"),
+                                "name": ev.get("name"),
+                                "short_name": ev.get("shortName"),
+                                "status": status.get("description"),
+                                "completed": bool(status.get("completed")),
+                                "detail": status.get("detail"),
+                                "teams": [
+                                    {
+                                        "abbr": (t.get("team") or {}).get("abbreviation"),
+                                        "score": t.get("score"),
+                                        "homeAway": t.get("homeAway"),
+                                    }
+                                    for t in teams
+                                ],
+                            }
+                        )
+                    self._ok(
+                        {
+                            "source_url": doc.source_url,
+                            "fetched_at_utc": doc.fetched_at_utc,
+                            "games": games,
+                            "rights_note": "Public ESPN JSON for beta research; commercial rights unverified.",
+                        }
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    self._ok(
+                        {
+                            "skipped": True,
+                            "reason": str(exc),
+                            "games": [],
+                        }
+                    )
+                return
+
+            if method == "GET" and path.startswith("/api/research/coaching/"):
+                event_id = parts[-1] if parts else ""
+                from pathlib import Path
+
+                path_file = (
+                    Path(__file__).resolve().parents[1]
+                    / "fixtures"
+                    / "box_scores"
+                    / "live_captures"
+                    / f"{event_id}.coaching.json"
+                )
+                if not path_file.exists():
+                    raise FileNotFoundError
+                import json as _json
+
+                self._ok(_json.loads(path_file.read_text(encoding="utf-8")))
+                return
+
             # Static web (optional)
             if method == "GET" and static_root:
                 from pathlib import Path

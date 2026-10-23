@@ -22,7 +22,7 @@ class WebPrototypeTests(unittest.TestCase):
 
     def test_league_first_sections(self):
         html = (WEB / "index.html").read_text(encoding="utf-8")
-        for needle in ("Tonight", "Leaderboard", "league", "Predict"):
+        for needle in ("Tonight", "Leaderboard", "league", "Predict", "Coaching"):
             self.assertIn(needle.lower(), html.lower())
 
     def test_accessible_controls(self):

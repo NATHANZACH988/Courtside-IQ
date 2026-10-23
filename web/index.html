@@ -79,6 +79,24 @@
         <p class="fineprint">Original prediction events are preserved. Corrections appear as new events.</p>
         <pre id="audit-box" class="audit-box" aria-live="polite">Select a settled question to inspect history.</pre>
       </section>
+
+      <section class="research-section" aria-labelledby="tonight-nba-title">
+        <h3 id="tonight-nba-title">Tonight’s NBA board</h3>
+        <p class="fineprint">Live scoreboard snapshot with source URL + fetch time. Not used to rewrite locked Arena predictions.</p>
+        <button type="button" id="btn-refresh-tonight" class="ghost">Refresh tonight’s games</button>
+        <ul id="tonight-games" class="tonight-games"></ul>
+      </section>
+
+      <section class="research-section" aria-labelledby="coaching-title">
+        <h3 id="coaching-title">Coaching insights</h3>
+        <p class="fineprint">Sideline research from play-by-play (fouls, substitutions, hot/cold windows). Subjective grades do not affect Arena scoring.</p>
+        <label for="coaching-event">Captured event id</label>
+        <div class="inline-form">
+          <input id="coaching-event" type="text" value="401909848" />
+          <button type="button" id="btn-load-coaching">Load</button>
+        </div>
+        <pre id="coaching-box" class="audit-box" aria-live="polite">Load CHI@MIL capture (401909848) for rotation / foul / hot-cold summary.</pre>
+      </section>
     </section>
   </main>
 

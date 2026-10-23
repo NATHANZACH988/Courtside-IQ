@@ -7,33 +7,26 @@ Source: `courtside-iq-dual-agent-starter(1).zip` (34 files, ZIP integrity verifi
 | Item | Status |
 |------|--------|
 | Collaboration foundation (`README`, docs, CI) | Present on `main` |
+| Sideline / game-flow research specs | Present on `main` (`docs/SIDELINE_COACHING_INTELLIGENCE.md`, `docs/GAME_FLOW_INTELLIGENCE.md`) |
 | Starter ZIP in this Cloud Agent workspace | **Not found** |
 | Starter ZIP on GitHub releases/contents | **Not present** |
-| Research + Arena + web implementation | **Scaffolded by Cursor** on branch `cursor/prediction-vertical-slice-f5e3` (not the original ZIP) |
+| Cursor Arena + research scaffold | On `cursor/prediction-vertical-slice-f5e3` |
 
-**Imported from ZIP:** none (archive unavailable in this environment).
+**Imported from ZIP:** none (archive still unavailable). Owner action requested to upload/push the ZIP.
 
-**Created instead (Cursor vertical slice):**
+**Built without ZIP (Cursor):**
 
-- `arena/` — Prediction Arena domain service, SQLite schema, closeness-v1 scoring, stdlib HTTP API
-- `research/` — doctrine gates, foul-trouble, hot/cold streaks, minutes helpers, evidence records
-- `web/` — mobile-first league homepage prototype
-- `fixtures/box_scores/` — source-attributed offline box-score fixture
-- `docs/SCHEMA_PROPOSAL.md`, `docs/SCORING_V1.md`, `docs/LAUNCH.md`
-- Tests under `arena/tests`, `research/tests`, `tests`
+- Prediction Arena vertical slice with tipoff locks + closeness-v1 grading
+- Live ESPN capture path + CHI@MIL 2026-10-23 final fixture (`fixtures/box_scores/live_captures/401909848.json`)
+- Coaching intelligence schemas + PBP foul/sub/hot-cold extractors + rotation frequency baseline
+- Mobile league UI + tonight board + coaching insight panel
 
-When the ZIP becomes available, import with the commands below **without overwriting**
-`README.md`, `docs/API_CONTRACT.md`, `docs/GROK_TASK_BRIEF.md`, `docs/AGENT_COLLABORATION.md`,
-or Cursor’s newer Arena modules without review:
+When the ZIP arrives, import into side folders first, then merge selectively:
 
 ```bash
 unzip 'courtside-iq-dual-agent-starter(1).zip' -d /tmp/courtside-import
-cd /path/to/clone/of/Courtside-IQ
-# Diff carefully before copying — research/ and web/ already exist.
 cp -R /tmp/courtside-import/courtside-iq/research ./research-from-zip
 cp -R /tmp/courtside-import/courtside-iq/web ./web-from-zip
 cp -R /tmp/courtside-import/courtside-iq/tests ./tests-from-zip
-# Merge selectively after review.
+# Diff/merge carefully — do not overwrite shared collaboration docs blindly.
 ```
-
-Do not treat documentation alone as evidence of deployment.
