@@ -1,26 +1,39 @@
 # Starter import status
 
-Source: `courtside-iq-dual-agent-starter(1).zip` (34 files, ZIP integrity verified).
+Source: `courtside-iq-dual-agent-starter(1).zip` (34 files, ZIP integrity verified locally by prior agent).
 
-The archive was verified locally: 34 research tests and 3 website checks passed.
+## GitHub / this environment
 
-**GitHub status:** Collaboration foundation, .gitignore, CI workflow and this manifest are committed. **The full archive contents have not been pushed.** Do not treat local test results as CI validation of GitHub source.
+| Item | Status |
+|------|--------|
+| Collaboration foundation (`README`, docs, CI) | Present on `main` |
+| Starter ZIP in this Cloud Agent workspace | **Not found** |
+| Starter ZIP on GitHub releases/contents | **Not present** |
+| Research + Arena + web implementation | **Scaffolded by Cursor** on branch `cursor/prediction-vertical-slice-f5e3` (not the original ZIP) |
 
-To import the full package from a machine with the ZIP and GitHub credentials:
+**Imported from ZIP:** none (archive unavailable in this environment).
+
+**Created instead (Cursor vertical slice):**
+
+- `arena/` — Prediction Arena domain service, SQLite schema, closeness-v1 scoring, stdlib HTTP API
+- `research/` — doctrine gates, foul-trouble, hot/cold streaks, minutes helpers, evidence records
+- `web/` — mobile-first league homepage prototype
+- `fixtures/box_scores/` — source-attributed offline box-score fixture
+- `docs/SCHEMA_PROPOSAL.md`, `docs/SCORING_V1.md`, `docs/LAUNCH.md`
+- Tests under `arena/tests`, `research/tests`, `tests`
+
+When the ZIP becomes available, import with the commands below **without overwriting**
+`README.md`, `docs/API_CONTRACT.md`, `docs/GROK_TASK_BRIEF.md`, `docs/AGENT_COLLABORATION.md`,
+or Cursor’s newer Arena modules without review:
 
 ```bash
 unzip 'courtside-iq-dual-agent-starter(1).zip' -d /tmp/courtside-import
 cd /path/to/clone/of/Courtside-IQ
-cp -R /tmp/courtside-import/courtside-iq/research ./
-cp -R /tmp/courtside-import/courtside-iq/web ./
-cp -R /tmp/courtside-import/courtside-iq/tests ./
-cp /tmp/courtside-import/courtside-iq/docs/LAUNCH.md ./docs/
-python -m unittest discover -s research/tests -p 'test_*.py' -v
-python -m unittest discover -s tests -p 'test_*.py' -v
-git checkout -b feat/import-starter
- git add research web tests docs/LAUNCH.md
- git commit -m 'Import validated NBA research and website starter'
- git push -u origin feat/import-starter
+# Diff carefully before copying — research/ and web/ already exist.
+cp -R /tmp/courtside-import/courtside-iq/research ./research-from-zip
+cp -R /tmp/courtside-import/courtside-iq/web ./web-from-zip
+cp -R /tmp/courtside-import/courtside-iq/tests ./tests-from-zip
+# Merge selectively after review.
 ```
 
-Do not overwrite `README.md`, `docs/API_CONTRACT.md`, `docs/GROK_TASK_BRIEF.md` or `docs/AGENT_COLLABORATION.md` without joint review. The additional research documentation is in `research/docs/`.
+Do not treat documentation alone as evidence of deployment.

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Courtside IQ — Prediction Arena (Beta)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand-block">
+      <p class="brand">Courtside IQ</p>
+      <p class="beta-tag">Private beta · Free · No prizes</p>
+    </div>
+    <button type="button" id="btn-logout" class="ghost" hidden>Sign out</button>
+  </header>
+
+  <main id="app">
+    <section id="view-auth" class="panel" aria-labelledby="auth-title">
+      <h1 id="auth-title" class="brand-hero">Courtside IQ</h1>
+      <p class="lede">Predict player stats. Compete with your league and the house AI. No wagers. No prizes.</p>
+      <form id="form-login" class="stack">
+        <label for="display-name">Display name</label>
+        <input id="display-name" name="display_name" type="text" autocomplete="nickname" required maxlength="40" />
+        <button type="submit">Enter arena</button>
+      </form>
+      <p class="fineprint">Invite-only beta. Server locks submissions at tipoff.</p>
+    </section>
+
+    <section id="view-home" class="panel" hidden>
+      <div class="league-head">
+        <h2 id="league-name">Your league</h2>
+        <p id="league-notice" class="fineprint">Free, invite-only, no prizes.</p>
+      </div>
+
+      <div class="actions-row">
+        <form id="form-create-league" class="inline-form">
+          <label for="new-league-name" class="sr-only">New league name</label>
+          <input id="new-league-name" type="text" placeholder="Create league" maxlength="60" />
+          <button type="submit">Create</button>
+        </form>
+        <form id="form-join-league" class="inline-form">
+          <label for="invite-code" class="sr-only">Invite code</label>
+          <input id="invite-code" type="text" placeholder="Invite code" maxlength="32" />
+          <button type="submit">Join</button>
+        </form>
+      </div>
+
+      <nav class="league-switch" aria-label="Your leagues">
+        <label for="league-select">League</label>
+        <select id="league-select"></select>
+      </nav>
+
+      <section class="slate-section" aria-labelledby="tonight-title">
+        <div class="section-head">
+          <h3 id="tonight-title">Tonight’s slate</h3>
+          <div class="head-actions">
+            <button type="button" id="btn-seed-demo" class="ghost">Load demo slate</button>
+            <button type="button" id="btn-settle-demo" class="ghost">Settle demo (fixture)</button>
+          </div>
+        </div>
+        <p id="slate-meta" class="fineprint">Submit before tipoff. Locks are enforced on the server.</p>
+        <div id="slate-questions" class="question-list"></div>
+      </section>
+
+      <section class="board-section" aria-labelledby="board-title">
+        <h3 id="board-title">Leaderboard</h3>
+        <p class="fineprint">Ranked by accuracy. Skill vs baseline is experimental and does not affect rank. Low-sample entries are provisional.</p>
+        <ol id="leaderboard" class="leaderboard"></ol>
+      </section>
+
+      <section class="audit-section" aria-labelledby="audit-title">
+        <h3 id="audit-title">Audit trail</h3>
+        <p class="fineprint">Original prediction events are preserved. Corrections appear as new events.</p>
+        <pre id="audit-box" class="audit-box" aria-live="polite">Select a settled question to inspect history.</pre>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <p>Courtside IQ beta — forecasting competition, not a sportsbook.</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

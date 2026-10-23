@@ -11,4 +11,31 @@ Courtside IQ combines transparent NBA research with a free, no-prize forecasting
 
 See docs/AGENT_COLLABORATION.md and docs/API_CONTRACT.md. Do not display synthetic statistics as live. No wagers, prizes, or verified betting-edge claims.
 
-The full prototype remains in the separately provided starter ZIP until its files are imported. This README does **not** mean the website or engine is deployed.
+## Current codebase (Cursor vertical slice)
+
+The original 34-file starter ZIP was **not available** in this environment (see docs/IMPORT_STATUS.md). Cursor scaffolded a working prediction-to-grading slice:
+
+| Path | Purpose |
+|------|---------|
+| `arena/` | Leagues, slates, forecasts, locks, grading, leaderboard, audit |
+| `research/` | Doctrine gates, foul trouble, hot/cold streaks |
+| `web/` | Mobile-first league UI |
+| `fixtures/box_scores/` | Source-attributed offline results |
+| `docs/SCHEMA_PROPOSAL.md` | Schema/API proposal for joint review |
+| `docs/SCORING_V1.md` | Public closeness-v1 scoring explanation |
+
+### Quick start
+
+```bash
+PYTHONPATH=. python -m arena.api
+```
+
+### Tests
+
+```bash
+PYTHONPATH=. python -m unittest discover -s research/tests -p 'test_*.py' -v
+PYTHONPATH=. python -m unittest discover -s arena/tests -p 'test_*.py' -v
+PYTHONPATH=. python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+This README does **not** mean the product is deployed or that live NBA ingestion is configured.
