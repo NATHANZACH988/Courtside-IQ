@@ -42,11 +42,16 @@ PYTHONPATH=. python -m unittest discover -s tests -p 'test_*.py' -v
 
 ```bash
 PYTHONPATH=. python3 scripts/capture_live_game.py --event-id 401909848
-PYTHONPATH=. python3 scripts/grade_live_fixture.py
+PYTHONPATH=. python3 scripts/grade_live_fixture.py --retrospective-demo
 ```
 
 Tonight’s completed CHI@MIL final was captured with source URL + fetch timestamp under
 `fixtures/box_scores/live_captures/`. NBA.com CDN may 403; ESPN public JSON is used for
 research captures. **Commercial rights are unverified — do not deploy publicly without review.**
+
+**Important:** `grade_live_fixture.py --retrospective-demo` intentionally selects players and
+constructs baselines/guesses using final results. It demonstrates software mechanics only;
+its outputs are **not real pregame predictions or valid forecast backtests**. Genuine
+performance tracking requires independent, timestamped pretip baselines and picks.
 
 This README does **not** mean the product is deployed.
