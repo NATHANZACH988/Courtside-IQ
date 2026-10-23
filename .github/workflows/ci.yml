@@ -1,0 +1,18 @@
+name: Courtside IQ checks
+on:
+  push:
+  pull_request:
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Research tests
+        run: |
+          if [ -d research/tests ]; then python -m unittest discover -s research/tests -p 'test_*.py' -v; else echo 'Research tests not imported yet'; fi
+      - name: Website checks
+        run: |
+          if [ -d tests ]; then python -m unittest discover -s tests -p 'test_*.py' -v; else echo 'Website tests not imported yet'; fi
