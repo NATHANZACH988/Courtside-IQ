@@ -12,7 +12,10 @@ jobs:
           python-version: '3.11'
       - name: Research tests
         run: |
-          if [ -d research/tests ]; then python -m unittest discover -s research/tests -p 'test_*.py' -v; else echo 'Research tests not imported yet'; fi
-      - name: Website checks
+          if [ -d research/tests ]; then PYTHONPATH=. python -m unittest discover -s research/tests -p 'test_*.py' -v; else echo 'Research tests not imported yet'; fi
+      - name: Arena tests
         run: |
-          if [ -d tests ]; then python -m unittest discover -s tests -p 'test_*.py' -v; else echo 'Website tests not imported yet'; fi
+          if [ -d arena/tests ]; then PYTHONPATH=. python -m unittest discover -s arena/tests -p 'test_*.py' -v; else echo 'Arena tests not present'; fi
+      - name: Website / integration checks
+        run: |
+          if [ -d tests ]; then PYTHONPATH=. python -m unittest discover -s tests -p 'test_*.py' -v; else echo 'Website tests not imported yet'; fi

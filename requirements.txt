@@ -1,0 +1,2 @@
+# Beta vertical slice uses Python stdlib only (sqlite3, http.server, unittest).
+# Add pinned dependencies here when a paid/hosted stack is approved.

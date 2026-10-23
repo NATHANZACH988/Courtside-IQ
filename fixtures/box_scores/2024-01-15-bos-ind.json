@@ -1,0 +1,60 @@
+{
+  "fixture_id": "fx_2024_01_15_bos_ind",
+  "game_id": "game_20240115_BOS_IND",
+  "season": "2023-24",
+  "home_team_id": "BOS",
+  "away_team_id": "IND",
+  "scheduled_tipoff_utc": "2024-01-15T00:30:00Z",
+  "status": "final",
+  "source_url": "https://www.nba.com/game/ind-vs-bos-0022300553/box-score",
+  "fetched_at_utc": "2024-01-16T12:00:00Z",
+  "source_updated_at_utc": "2024-01-15T03:15:00Z",
+  "note": "Offline fixture for automated grading tests. Values frozen from a completed 2023-24 regular-season game snapshot; not a live feed.",
+  "players": [
+    {
+      "player_id": "ply_tatum",
+      "full_name": "Jayson Tatum",
+      "team_id": "BOS",
+      "position": "F",
+      "minutes": 37.2,
+      "PTS": 26,
+      "REB": 8,
+      "AST": 4,
+      "FG3M": 3,
+      "STL": 1,
+      "BLK": 0,
+      "TOV": 2,
+      "PF": 2
+    },
+    {
+      "player_id": "ply_haliburton",
+      "full_name": "Tyrese Haliburton",
+      "team_id": "IND",
+      "position": "G",
+      "minutes": 34.5,
+      "PTS": 22,
+      "REB": 4,
+      "AST": 11,
+      "FG3M": 2,
+      "STL": 2,
+      "BLK": 0,
+      "TOV": 3,
+      "PF": 1
+    },
+    {
+      "player_id": "ply_brown",
+      "full_name": "Jaylen Brown",
+      "team_id": "BOS",
+      "position": "G-F",
+      "minutes": 33.1,
+      "PTS": 19,
+      "REB": 5,
+      "AST": 3,
+      "FG3M": 2,
+      "STL": 1,
+      "BLK": 0,
+      "TOV": 2,
+      "PF": 3
+    }
+  ]
+}
