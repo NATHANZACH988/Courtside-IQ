@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import hmac
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 from urllib.parse import parse_qs, urlparse
 
 from arena.db import Database
-from arena.errors import ArenaError
+from arena.errors import ArenaError, ForbiddenError
 from arena.service import ArenaService
 
 
@@ -80,6 +82,13 @@ def make_handler(service: ArenaService, static_root: str | None = None) -> type:
                 return
 
             if method == "POST" and path == "/api/auth/demo-login":
+                # This is intentionally NOT authentication. Opt in only for local demos.
+                # Never expose the display-name login on an internet-facing server.
+                if (
+                    os.environ.get("COURTSIDE_IQ_ALLOW_INSECURE_DEMO_LOGIN") != "1"
+                    or self.client_address[0] not in ("127.0.0.1", "::1")
+                ):
+                    raise ForbiddenError("Insecure demo login is disabled")
                 body = read_json(self)
                 self._ok(service.demo_login(body.get("display_name", "")))
                 return
@@ -251,8 +260,13 @@ def make_handler(service: ArenaService, static_root: str | None = None) -> type:
                 self._ok(service.grade_slate(user, parts[2]))
                 return
 
-            if method == "GET" and path == "/api/admin/lock-due":
-                # Internal helper for cron / tests
+            if method == "POST" and path == "/api/admin/lock-due":
+                # Explicit privileged cron action: never mutate state through GET.
+                # Fail closed until a sufficiently strong secret is configured.
+                expected = os.environ.get("COURTSIDE_IQ_ADMIN_TOKEN", "")
+                provided = self.headers.get("X-Courtside-IQ-Admin-Token", "")
+                if len(expected) < 32 or not hmac.compare_digest(provided, expected):
+                    raise ForbiddenError("Admin authorization required")
                 count = service.lock_due_questions()
                 self._ok({"locked": count})
                 return
