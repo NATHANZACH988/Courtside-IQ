@@ -72,5 +72,16 @@ class PredictionAuditTests(unittest.TestCase):
                             for w in AUDIT.audit(fixture())["warnings"]))
 
 
+    def test_committed_batch_conflicts_are_visible(self):
+        import json
+        batch = os.path.join(os.path.dirname(__file__), "..", "gameflow",
+                             "predictions-2026-10-24.json")
+        with open(batch, encoding="utf-8") as source:
+            result = AUDIT.audit(json.load(source))
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["counts"]["entries"], 53)
+        self.assertEqual(result["counts"]["opposite_direction_players"], 3)
+        self.assertFalse(result["prop_ready"])
+
 if __name__ == "__main__":
     unittest.main()
