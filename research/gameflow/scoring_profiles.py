@@ -38,6 +38,7 @@ def aggregate(game_files, notes_path):
                                    "pts": 0, "fga": 0, "pf": 0,
                                    "capped": 0, "cannibal": 0, "victim": 0})
     final_events = set()
+    event_rosters = {}
     skipped_nonfinal = 0
     skipped_duplicate = 0
     for path in sorted(game_files):
@@ -53,10 +54,14 @@ def aggregate(game_files, notes_path):
             skipped_duplicate += 1
             continue
         final_events.add(event)
+        event_rosters[event] = set()
         for p in game.get("players", []):
             team, name = p.get("team"), p.get("name")
             if not team or not name:
                 continue
+            if (team, name) in event_rosters[event]:
+                continue
+            event_rosters[event].add((team, name))
             d = players[(team, name)]
             d["games"] += 1
             d["starts"] += int(bool(p.get("starter")))
@@ -89,7 +94,7 @@ def aggregate(game_files, notes_path):
                     player = note.get("player")
                     key = (team, player)
                     dedupe = (event, kind, team, player)
-                    if key not in players or dedupe in seen_notes:
+                    if key not in event_rosters[event] or dedupe in seen_notes:
                         continue
                     seen_notes.add(dedupe)
                     players[key]["capped"] += 1
@@ -97,11 +102,11 @@ def aggregate(game_files, notes_path):
                     bench, starter = note.get("bench_player"), note.get("slot_starter")
                     bench_key, starter_key = (team, bench), (team, starter)
                     dedupe = (event, kind, team, bench)
-                    if bench_key not in players or dedupe in seen_notes:
+                    if bench_key not in event_rosters[event] or dedupe in seen_notes:
                         continue
                     seen_notes.add(dedupe)
                     players[bench_key]["cannibal"] += 1
-                    if starter_key in players:
+                    if starter_key in event_rosters[event]:
                         players[starter_key]["victim"] += 1
 
     board = {}
