@@ -75,6 +75,18 @@ class ProfileIntegrityTests(unittest.TestCase):
         self.assertEqual(board["AAA|Starter"]["victim_events"], 0)
         self.assertEqual(diag["surge_notes_skipped_retracted"], 1)
 
+    def test_note_must_match_player_in_same_event(self):
+        a = self.write_game("a.json", game("101", players=[
+            player("Only In A", "AAA"), player("Duplicate", "AAA"),
+            player("Duplicate", "AAA")]))
+        b = self.write_game("b.json", game("102", players=[
+            player("Only In B", "AAA")]))
+        self.write_notes({"league": "nba", "event": "102", "notes": [
+            {"type": "foul_trouble_cap", "team": "AAA", "player": "Only In A"}]})
+        board, _ = aggregate([a, b], self.notes)
+        self.assertEqual(board["AAA|Only In A"]["capped_events"], 0)
+        self.assertEqual(board["AAA|Duplicate"]["games"], 1)
+
     def test_same_named_players_are_team_separated(self):
         path = self.write_game("a.json", game("101", players=[
             player("Same Name", "AAA", pts=10),
