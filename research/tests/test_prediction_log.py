@@ -151,7 +151,7 @@ class TestImmutableResearchArtifacts(unittest.TestCase):
             tip = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
             slate = [{"event_id": "synthetic-game-01", "tip_utc": tip,
                       "home": "AAA", "away": "BBB"}]
-            with patch.object(PL, "PRED_DIR", folder), patch.object(PL, "BOARD", board_path), \\
+            with patch.object(PL, "PRED_DIR", folder), patch.object(PL, "BOARD", board_path), \
                  patch.object(PL, "fetch_board_games", return_value=slate):
                 with self.assertRaisesRegex(SystemExit, "post-tip"):
                     PL.cmd_build(SimpleNamespace(date=local_today))
@@ -166,7 +166,7 @@ class TestImmutableResearchArtifacts(unittest.TestCase):
             date = "2099-01-01"
             slate = [{"event_id": "synthetic-game-01", "tip_utc": "2099-01-01T22:00:00Z",
                       "home": "AAA", "away": "BBB"}]
-            with patch.object(PL, "PRED_DIR", folder), patch.object(PL, "BOARD", board_path), \\
+            with patch.object(PL, "PRED_DIR", folder), patch.object(PL, "BOARD", board_path), \
                  patch.object(PL, "fetch_board_games", return_value=slate):
                 PL.cmd_build(SimpleNamespace(date=date))
                 path = os.path.join(folder, "predictions-2099-01-01.json")
@@ -186,7 +186,7 @@ class TestImmutableResearchArtifacts(unittest.TestCase):
                 json.dump(self.frozen(), file)
             final_data = final([player("Test Player", pts=14)])
             args = SimpleNamespace(date="2026-10-24")
-            with patch.object(PL, "PRED_DIR", folder), \\
+            with patch.object(PL, "PRED_DIR", folder), \
                  patch.object(PL, "load_final", return_value=final_data):
                 PL.cmd_grade(args)
                 original_path = os.path.join(folder, "predictions-2026-10-24-graded.json")
@@ -230,7 +230,7 @@ class TestImmutableResearchArtifacts(unittest.TestCase):
             source = os.path.join(folder, "predictions-2026-10-24.json")
             with open(source, "w", encoding="utf-8") as file:
                 json.dump(self.frozen(logged="2026-10-24T23:00:00Z"), file)
-            with patch.object(PL, "PRED_DIR", folder), \\
+            with patch.object(PL, "PRED_DIR", folder), \
                  patch.object(PL, "load_final", side_effect=AssertionError("should not fetch")):
                 with self.assertRaisesRegex(SystemExit, "not frozen before tip"):
                     PL.cmd_grade(SimpleNamespace(date="2026-10-24"))
