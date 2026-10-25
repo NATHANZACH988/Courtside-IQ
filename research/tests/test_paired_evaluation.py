@@ -22,18 +22,24 @@ def batch(sport="NBA"):
          "scheduled_start_utc": "2026-10-25T19:00:00Z",
          "frozen_at_utc": "2026-10-25T12:55:00Z",
          "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+         "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+         "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
          "predicted_value": 21, "baseline_value": 22},
         {"forecast_id": "forecasts:f2", "event_id": event,
          "athlete_id": "players:p2", "team_id": "teams:t2", "market": "points",
          "scheduled_start_utc": "2026-10-25T19:00:00Z",
          "frozen_at_utc": "2026-10-25T12:55:00Z",
          "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+         "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+         "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
          "predicted_value": 9, "baseline_value": 13},
         {"forecast_id": "forecasts:f3", "event_id": second,
          "athlete_id": "players:p3", "team_id": "teams:t3", "market": "points",
          "scheduled_start_utc": "2026-10-25T20:00:00Z",
          "frozen_at_utc": "2026-10-25T12:55:00Z",
          "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+         "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+         "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
          "predicted_value": 17, "baseline_value": 18},
     ]
     def settled(forecast, status, actual=None):
@@ -52,6 +58,7 @@ def batch(sport="NBA"):
         "market": "points", "model_version": "model:v1",
         "baseline_version": "baseline:naive-v1",
         "frozen_manifest_sha256": H,
+        "baseline_artifact_sha256": H,
         "evaluation_protocol_sha256": H,
         "evaluation_protocol_frozen_at_utc": "2026-10-25T12:00:00Z",
         "frozen_manifest_at_utc": "2026-10-25T13:00:00Z",
@@ -273,6 +280,35 @@ class PairedEvaluationTests(unittest.TestCase):
         case["settlements"] = []
         report = evaluate_batch(case)
         self.assertFalse(report.structurally_valid)
+        self.assertIsNone(report.model_mae)
+
+    def test_baseline_must_freeze_before_prediction(self):
+        case = batch()
+        case["forecasts"][0]["baseline_frozen_at_utc"] = "2026-10-25T12:58:00Z"
+        self.assertIn("forecast_0_baseline_not_prefrozen", evaluate_batch(case).reasons)
+
+    def test_baseline_training_data_must_precede_its_freeze(self):
+        case = batch()
+        case["forecasts"][0]["baseline_data_as_of_utc"] = "2026-10-25T12:51:00Z"
+        self.assertIn("forecast_0_baseline_not_prefrozen", evaluate_batch(case).reasons)
+
+    def test_baseline_artifact_digest_required(self):
+        case = batch()
+        case.pop("baseline_artifact_sha256")
+        self.assertIn("baseline_artifact_digest_missing", evaluate_batch(case).reasons)
+
+    def test_same_athlete_on_opposing_teams_rejected(self):
+        case = batch()
+        case["forecasts"][1]["athlete_id"] = case["forecasts"][0]["athlete_id"]
+        case["settlements"][1]["athlete_id"] = case["forecasts"][0]["athlete_id"]
+        self.assertIn("athlete_assigned_multiple_teams_in_event",
+                      evaluate_batch(case).reasons)
+
+    def test_extreme_integer_cannot_crash_or_inflate_accuracy(self):
+        case = batch()
+        case["forecasts"][0]["predicted_value"] = 10 ** 2000
+        report = evaluate_batch(case)
+        self.assertIn("forecast_0_predicted_value_invalid", report.reasons)
         self.assertIsNone(report.model_mae)
 
     def test_cli_failure_on_invalid_inventory(self):
