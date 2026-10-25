@@ -44,7 +44,13 @@ def _time(value: object) -> datetime | None:
 
 
 def _number(value: object) -> bool:
-    return type(value) in (int, float) and isfinite(value)
+    # Enforce a realistic finite envelope and avoid huge-int->float overflows.
+    # Units/stat vocabularies remain sport-adapter responsibilities.
+    if type(value) is int:
+        return abs(value) <= 1_000_000_000
+    if type(value) is float:
+        return isfinite(value) and abs(value) <= 1_000_000_000
+    return False
 
 
 def _url(value: object) -> bool:
@@ -123,6 +129,8 @@ def evaluate_batch(document: object) -> PairedEvaluation:
         _invalid(reasons, "baseline_version_invalid")
     if not _sha(document.get("frozen_manifest_sha256")):
         _invalid(reasons, "frozen_manifest_digest_missing")
+    if not _sha(document.get("baseline_artifact_sha256")):
+        _invalid(reasons, "baseline_artifact_digest_missing")
     if not _sha(document.get("evaluation_protocol_sha256")):
         _invalid(reasons, "evaluation_protocol_digest_missing")
 
@@ -164,10 +172,16 @@ def evaluate_batch(document: object) -> PairedEvaluation:
         start = _time(entry.get("scheduled_start_utc"))
         frozen = _time(entry.get("frozen_at_utc"))
         training = _time(entry.get("training_data_as_of_utc"))
+        base_frozen = _time(entry.get("baseline_frozen_at_utc"))
+        base_as_of = _time(entry.get("baseline_data_as_of_utc"))
         if start is None or frozen is None or training is None:
             _invalid(reasons, pre + "_times_invalid")
         elif not training <= frozen < start:
             _invalid(reasons, pre + "_hindsight_or_poststart")
+        if base_frozen is None or base_as_of is None or frozen is None:
+            _invalid(reasons, pre + "_baseline_times_invalid")
+        elif not base_as_of <= base_frozen <= frozen:
+            _invalid(reasons, pre + "_baseline_not_prefrozen")
         if start is not None and batch_frozen is not None and batch_frozen >= start:
             _invalid(reasons, pre + "_manifest_late")
         if frozen is not None and batch_frozen is not None and frozen > batch_frozen:
@@ -188,6 +202,7 @@ def evaluate_batch(document: object) -> PairedEvaluation:
 
     # Reject repeated athlete-event-market opportunities hidden under new IDs.
     seen_opportunities: set[tuple[str, str, str, str]] = set()
+    seen_player_teams: dict[tuple[str, str], str] = {}
     for entry in forecasts.values():
         key = (entry.get("event_id"), entry.get("athlete_id"),
                entry.get("team_id"), entry.get("market"))
@@ -196,6 +211,10 @@ def evaluate_batch(document: object) -> PairedEvaluation:
         if key in seen_opportunities:
             _invalid(reasons, "duplicate_player_event_market")
         seen_opportunities.add(key)
+        player_key = (key[0], key[1])
+        if player_key in seen_player_teams and seen_player_teams[player_key] != key[2]:
+            _invalid(reasons, "athlete_assigned_multiple_teams_in_event")
+        seen_player_teams[player_key] = key[2]
 
     outcomes = document.get("settlements")
     if not isinstance(outcomes, list):
