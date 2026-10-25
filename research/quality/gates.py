@@ -115,7 +115,8 @@ def audit_manifest(raw: object) -> Audit:
             source_errors.append(f"{prefix}_url_invalid")
         if not _digest(source.get("raw_sha256")):
             source_errors.append(f"{prefix}_raw_digest_missing")
-        if source.get("rights_status") not in RIGHTS:
+        rights = source.get("rights_status")
+        if not isinstance(rights, str) or rights not in RIGHTS:
             source_errors.append(f"{prefix}_rights_status_missing")
         published = _timestamp(source.get("published_at_utc"))
         captured = _timestamp(source.get("captured_at_utc"))
