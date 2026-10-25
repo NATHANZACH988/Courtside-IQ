@@ -106,9 +106,7 @@ class MultiSportEvidenceTests(unittest.TestCase):
 
     def test_naive_timestamps_and_inverted_publication_rejected(self):
         with self.assertRaisesRegex(ValueError, "timezone-aware"):
-            event(event_id="nba:bad", sport="NBA").__class__(
-                "NBA", "nba:bad", datetime(2026, 10, 25), "team:a", "team:b"
-            )
+            Event("NBA", "nba:bad", datetime(2026, 10, 25), "team:a", "team:b")
         with self.assertRaisesRegex(ValueError, "timezone-aware"):
             stamp(captured=datetime(2026, 10, 25))
         with self.assertRaisesRegex(ValueError, "before it was published"):
@@ -119,9 +117,7 @@ class MultiSportEvidenceTests(unittest.TestCase):
             Observation("repeated-name", "nba:event-1", "pregame",
                         "injury", "out", stamp(), "John Smith", "team:home")
         self.ledger.add_observation(observation())
-        self.ledger.add_observation(observation(
-            oid="source:obs-2", player="provider:athlete-2"
-        ) if False else Observation(
+        self.ledger.add_observation(Observation(
             "source:obs-2", "nba:event-1", "pregame", "injury_status", "available",
             stamp(), "provider:athlete-2", "team:home"
         ))
