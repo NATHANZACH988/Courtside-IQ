@@ -311,6 +311,17 @@ class PairedEvaluationTests(unittest.TestCase):
         self.assertIn("forecast_0_predicted_value_invalid", report.reasons)
         self.assertIsNone(report.model_mae)
 
+    def test_checked_in_synthetic_nfl_fixture_is_structurally_usable(self):
+        fixture = Path(__file__).resolve().parents[1] / "examples" / "paired_batch_synthetic.json"
+        payload = json.loads(fixture.read_text(encoding="utf-8"))
+        self.assertIn("SYNTHETIC", payload["_warning"])
+        report = evaluate_batch(payload)
+        self.assertTrue(report.structurally_valid, report.reasons)
+        self.assertEqual((report.graded, report.voided), (2, 1))
+        self.assertEqual(report.model_mae, 2.5)
+        self.assertEqual(report.baseline_mae, 3.0)
+        self.assertFalse(report.production_eligible)
+
     def test_cli_failure_on_invalid_inventory(self):
         case = batch()
         case["expected_forecast_ids"].pop()
