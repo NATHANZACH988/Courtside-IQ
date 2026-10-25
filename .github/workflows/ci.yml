@@ -2,6 +2,8 @@ name: Courtside IQ checks
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   python-tests:
     runs-on: ubuntu-latest
@@ -10,9 +12,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Research tests
+      - name: Research and process regression tests (required)
         run: |
-          if [ -d research/tests ]; then python -m unittest discover -s research/tests -p 'test_*.py' -v; else echo 'Research tests not imported yet'; fi
-      - name: Website checks
+          test -d research/tests
+          test -n "$(find research/tests -name 'test_*.py' -print -quit)"
+          PYTHONPATH=. python -m unittest discover -s research/tests -p 'test_*.py' -v
+      - name: Website checks (only after website is imported)
         run: |
-          if [ -d tests ]; then python -m unittest discover -s tests -p 'test_*.py' -v; else echo 'Website tests not imported yet'; fi
+          if [ -d tests ]; then
+            PYTHONPATH=. python -m unittest discover -s tests -p 'test_*.py' -v
+          else
+            echo '::notice::Website source and tests are not on this branch; website functionality is NOT verified by this run.'
+          fi
