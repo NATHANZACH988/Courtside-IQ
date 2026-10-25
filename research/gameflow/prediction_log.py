@@ -32,6 +32,8 @@ import argparse
 import glob
 import json
 import os
+import re
+import hashlib
 import urllib.request
 from datetime import datetime, timezone
 
@@ -45,6 +47,71 @@ UA = {"User-Agent": "Mozilla/5.0"}
 # retracted pre-hardening DAL false positives (2026-10-21). Excluded
 # from predictions until clean games wash the count out.
 EXCLUSIONS = {"Daniel Gafford": "victim flags contaminated by retracted detector artifacts"}
+
+# A date-only check is insufficient: a same-day freeze can happen after tip.
+# Neither these clock checks nor SHA digests independently attest source capture.
+_REVISION = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
+_DATE = re.compile(r"^\\d{4}-\\d{2}-\\d{2}$")
+
+
+def _valid_date(value):
+    if not isinstance(value, str) or not _DATE.fullmatch(value):
+        raise SystemExit("date must be YYYY-MM-DD")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as exc:
+        raise SystemExit("date must be a valid YYYY-MM-DD") from exc
+    if parsed.strftime("%Y-%m-%d") != value:
+        raise SystemExit("date must be YYYY-MM-DD")
+
+
+def _utc_timestamp(value, label):
+    if not isinstance(value, str):
+        raise SystemExit(f"{label} must be an offset-aware timestamp")
+    try:
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, OverflowError) as exc:
+        raise SystemExit(f"{label} is not a valid timestamp") from exc
+    if stamp.tzinfo is None or stamp.utcoffset() is None:
+        raise SystemExit(f"{label} must include a timezone")
+    return stamp.astimezone(timezone.utc)
+
+
+def _require_pretip(games, at):
+    if not isinstance(games, list) or not games:
+        raise SystemExit("refusing to freeze an empty or invalid game slate")
+    for game in games:
+        if not isinstance(game, dict) or not game.get("event_id"):
+            raise SystemExit("game schedule missing event ID")
+        tip = _utc_timestamp(game.get("tip_utc"), "scheduled tip")
+        if at >= tip:
+            raise SystemExit(
+                f"refusing post-tip freeze for event {game['event_id']}: "
+                f"capture time {at.isoformat()} >= tip {tip.isoformat()}"
+            )
+
+
+def _verify_original_freeze(doc):
+    """Fail closed on edited/post-tip input before any grade output is created.
+
+    This is a structural guard, not proof the claimed freeze occurred.
+    """
+    if not isinstance(doc, dict) or doc.get("frozen") is not True:
+        raise SystemExit("grading requires a frozen prediction manifest")
+    built = _utc_timestamp(doc.get("built_at_utc"), "build timestamp")
+    entries = doc.get("predictions")
+    if not isinstance(entries, list) or not entries:
+        raise SystemExit("grading requires nonempty frozen predictions")
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise SystemExit(f"prediction {index} is not an object")
+        tip = _utc_timestamp(entry.get("tip_utc"), f"prediction {index} tip")
+        logged = _utc_timestamp(entry.get("logged_at_utc"),
+                                f"prediction {index} logged")
+        if built >= tip or logged >= tip or logged > built:
+            raise SystemExit(f"prediction {index} was not frozen before tip")
+        if entry.get("grade") is not None:
+            raise SystemExit(f"prediction {index} already contains a grade")
 
 
 def pmin(v):
@@ -101,6 +168,7 @@ def predictions_for(r, opp):
 
 
 def cmd_build(args):
+    _valid_date(args.date)
     today = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d")
     if args.date < today:
         raise SystemExit(f"refusing to build for past date {args.date} (look-ahead)")
@@ -108,13 +176,18 @@ def cmd_build(args):
     out = os.path.join(PRED_DIR, f"predictions-{args.date}.json")
     if os.path.exists(out):
         raise SystemExit(f"{out} already exists — the log is frozen once written")
-    board = json.load(open(BOARD))
+    with open(BOARD, "rb") as source:
+        board_bytes = source.read()
+    board = json.loads(board_bytes)
+    board_sha256 = hashlib.sha256(board_bytes).hexdigest()
     by_team = {}
     for r in board["players"]:
         by_team.setdefault(r["team"], []).append(r)
     games = fetch_board_games(args.date)
+    frozen_at = datetime.now(timezone.utc)
+    _require_pretip(games, frozen_at)
     entries = []
-    now = datetime.now(timezone.utc).isoformat()
+    now = frozen_at.isoformat()
     for g in games:
         for side, opp_side in (("home", "away"), ("away", "home")):
             team, opp = g[side], g[opp_side]
@@ -130,9 +203,19 @@ def cmd_build(args):
                         "thin_sample": r["thin_sample"],
                         "basis": basis, "logged_at_utc": now, "grade": None})
     doc = {"date": args.date, "built_at_utc": now, "frozen": True,
+           "board_sha256": board_sha256,
+           "schedule_projection_sha256": hashlib.sha256(
+               json.dumps(games, sort_keys=True).encode("utf-8")).hexdigest(),
            "finals_banked_at_build": board["finals_used"],
            "games": len(games), "predictions": entries}
-    json.dump(doc, open(out, "w"), indent=1)
+    # Check again immediately before writing: a slow slate build must not
+    # pass the first gate then publish after an event has started.
+    _require_pretip(games, datetime.now(timezone.utc))
+    try:
+        with open(out, "x", encoding="utf-8") as target:
+            json.dump(doc, target, indent=1)
+    except FileExistsError as exc:
+        raise SystemExit(f"{out} already exists — frozen logs are immutable") from exc
     from collections import Counter
     print(f"games: {len(games)}; predictions frozen: {len(entries)}")
     print(Counter(e["mechanism"] for e in entries))
@@ -219,8 +302,34 @@ def cannibal_shape_on(players, starter_name):
 
 
 def cmd_grade(args):
+    _valid_date(args.date)
     src = os.path.join(PRED_DIR, f"predictions-{args.date}.json")
-    doc = json.load(open(src))
+    with open(src, encoding="utf-8") as source:
+        doc = json.load(source)
+    _verify_original_freeze(doc)
+    revision = getattr(args, "revision", None)
+    reason = getattr(args, "reason", None)
+    if revision is not None and (not isinstance(revision, str)
+                                 or not _REVISION.fullmatch(revision)):
+        raise SystemExit("revision must be a lowercase safe ID (max 40 chars)")
+    if revision is None and reason is not None:
+        raise SystemExit("--reason requires --revision")
+    if revision is not None and (
+            not isinstance(reason, str) or not reason.strip()):
+        raise SystemExit("--revision requires a nonblank --reason")
+    initial_out = os.path.join(PRED_DIR, f"predictions-{args.date}-graded.json")
+    if revision is not None:
+        if not os.path.isfile(initial_out):
+            raise SystemExit("a later revision requires the original graded file")
+        with open(initial_out, "rb") as prior:
+            prior_sha256 = hashlib.sha256(prior.read()).hexdigest()
+        out = os.path.join(PRED_DIR,
+                           f"predictions-{args.date}-graded-{revision}.json")
+    else:
+        out = initial_out
+        prior_sha256 = None
+    if os.path.exists(out):
+        raise SystemExit(f"{out} already exists — grade snapshots are immutable")
     finals = {}
     results, pending = [], 0
     for e in doc["predictions"]:
@@ -233,9 +342,16 @@ def cmd_grade(args):
             continue
         grade, note = grade_entry(e, fin)
         results.append({**e, "grade": grade, "grade_note": note})
-    out = os.path.join(PRED_DIR, f"predictions-{args.date}-graded.json")
-    json.dump({**doc, "graded_at_utc": datetime.now(timezone.utc).isoformat(),
-               "predictions": results}, open(out, "w"), indent=1)
+    graded = {**doc, "graded_at_utc": datetime.now(timezone.utc).isoformat(),
+              "grade_revision": revision or "original",
+              "grade_revision_reason": reason,
+              "original_grade_sha256": prior_sha256,
+              "predictions": results}
+    try:
+        with open(out, "x", encoding="utf-8") as target:
+            json.dump(graded, target, indent=1)
+    except FileExistsError as exc:
+        raise SystemExit(f"{out} already exists — grade snapshots are immutable") from exc
     from collections import Counter
     print("by mechanism:")
     by = {}
@@ -252,5 +368,8 @@ if __name__ == "__main__":
     for name in ("build", "grade"):
         p = sub.add_parser(name)
         p.add_argument("--date", required=True)
+        if name == "grade":
+            p.add_argument("--revision", help="safe ID for a later immutable grade")
+            p.add_argument("--reason", help="required reason for later grade revision")
     args = ap.parse_args()
     {"build": cmd_build, "grade": cmd_grade}[args.cmd](args)
