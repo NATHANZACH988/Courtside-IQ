@@ -217,5 +217,66 @@ class ClaimAuditTests(unittest.TestCase):
         self.assertIn("claim_0_dataset_sha256_missing", result.stdout)
 
 
+    def test_unhashable_scope_fails_closed_instead_of_crashing(self):
+        c = claim()
+        c["scope"] = ["predictive"]
+        result = audit(c)
+        self.assertFalse(result.structural_ready)
+        self.assertIn("claim_0_scope_invalid", result.reasons)
+
+    def test_nonlist_supersession_cannot_crash_cohort_comparison(self):
+        older = claim("study:older")
+        newer = claim("study:newer")
+        newer["numerator"] = 3
+        newer["supersedes"] = None
+        result = audit(older, newer)
+        self.assertFalse(result.structural_ready)
+        self.assertIn("claim_1_supersedes_invalid", result.reasons)
+        self.assertTrue(any(r.startswith("unreconciled_cohort_result:")
+                            for r in result.reasons))
+
+    def test_actual_ticket_rejects_nonfinite_lines(self):
+        for bad_line in (float("inf"), float("-inf"), float("nan")):
+            with self.subTest(line=str(bad_line)):
+                c = claim(kind="actual_ticket")
+                c.update({
+                    "line_kind": "posted", "book": "fixturebook",
+                    "selection_side": "over", "market_period": "full_game",
+                    "settlement_version": "v1", "american_odds": -110,
+                    "line": bad_line,
+                    "quote_captured_at_utc": "2026-10-25T17:00:00Z",
+                    "event_start_utc": "2026-10-25T18:00:00Z",
+                })
+                result = audit(c)
+                self.assertFalse(result.structural_ready)
+                self.assertIn("claim_0_line_missing_or_nonfinite", result.reasons)
+
+    def test_long_supersession_chain_does_not_exhaust_recursion(self):
+        claims = []
+        for i in range(1100):
+            c = claim(f"study:chain-{i}")
+            c["cohort_id"] = f"cohort:chain-{i}"
+            c["status"] = "active" if i == 1099 else "superseded"
+            c["supersedes"] = [f"study:chain-{i-1}"] if i else []
+            claims.append(c)
+        result = audit(*claims)
+        self.assertTrue(result.structural_ready)
+        self.assertEqual(result.checked_claims, 1100)
+
+    def test_large_supersession_cycle_is_detected(self):
+        claims = []
+        for i in range(1100):
+            c = claim(f"study:loop-{i}")
+            c["cohort_id"] = f"cohort:loop-{i}"
+            c["status"] = "superseded"
+            c["supersedes"] = [f"study:loop-{(i-1) % 1100}"]
+            claims.append(c)
+        result = audit(*claims)
+        self.assertFalse(result.structural_ready)
+        self.assertTrue(any(r.startswith("supersession_cycle:")
+                            for r in result.reasons))
+
+
+
 if __name__ == "__main__":
     unittest.main()

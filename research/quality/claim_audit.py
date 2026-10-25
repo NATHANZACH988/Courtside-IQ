@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import math
 import re
 import sys
 from urllib.parse import urlsplit
@@ -142,13 +143,14 @@ def audit_claims(document: object) -> ClaimAudit:
             odds = claim.get("american_odds")
             if type(odds) is not int or (-100 < odds < 100):
                 reasons.append(p + "_odds_invalid")
-            if not isinstance(claim.get("line"), (int, float)) or type(claim.get("line")) is bool:
-                reasons.append(p + "_line_missing")
+            line = claim.get("line")
+            if (type(line) not in (int, float) or not math.isfinite(line)):
+                reasons.append(p + "_line_missing_or_nonfinite")
             offered = _time(claim.get("quote_captured_at_utc"))
             start = _time(claim.get("event_start_utc"))
             if offered is None or start is None or offered >= start:
                 reasons.append(p + "_quote_not_proven_pregame")
-        if kind == "prospective_forecast" or scope in {"predictive", "profitability"}:
+        if kind == "prospective_forecast" or scope == "predictive" or scope == "profitability":
             frozen = _time(claim.get("frozen_at_utc"))
             start = _time(claim.get("event_start_utc"))
             if frozen is None or start is None or frozen >= start:
@@ -189,28 +191,47 @@ def audit_claims(document: object) -> ClaimAudit:
             for later in valid[i + 1:]:
                 if (earlier["numerator"], earlier["denominator"]) == (later["numerator"], later["denominator"]):
                     continue
-                if (earlier.get("claim_id") not in later.get("supersedes", [])
-                        and later.get("claim_id") not in earlier.get("supersedes", [])):
+                # Invalid supersession metadata must fail closed without
+                # crashing the audit or being interpreted as an exception.
+                later_links = later.get("supersedes", [])
+                earlier_links = earlier.get("supersedes", [])
+                if not isinstance(later_links, list):
+                    later_links = []
+                if not isinstance(earlier_links, list):
+                    earlier_links = []
+                if (earlier.get("claim_id") not in later_links
+                        and later.get("claim_id") not in earlier_links):
                     reasons.append("unreconciled_cohort_result:" + str(earlier.get("claim_id")) + ":" + str(later.get("claim_id")))
     # Cyclic supersession would destroy the meaning of 'latest'.
     graph = {cid: [x for x in claim.get("supersedes", []) if _id(x) and x in all_claims]
              for cid, claim in all_claims.items()
              if isinstance(claim.get("supersedes", []), list)}
+    # Iterative DFS avoids RecursionError on a large, untrusted chain.
+    # Nodes in the active path indicate cycles; completed nodes are safe.
     visiting: set[str] = set()
     visited: set[str] = set()
-    def visit(node: str) -> None:
-        if node in visiting:
-            reasons.append("supersession_cycle:" + node)
-            return
-        if node in visited:
-            return
-        visiting.add(node)
-        for nxt in graph.get(node, []):
-            visit(nxt)
-        visiting.remove(node)
-        visited.add(node)
-    for node in graph:
-        visit(node)
+    for root in graph:
+        if root in visited:
+            continue
+        stack: list[tuple[str, bool]] = [(root, False)]
+        while stack:
+            node, leaving = stack.pop()
+            if leaving:
+                visiting.discard(node)
+                visited.add(node)
+                continue
+            if node in visited:
+                continue
+            if node in visiting:
+                reasons.append("supersession_cycle:" + node)
+                continue
+            visiting.add(node)
+            stack.append((node, True))
+            for nxt in reversed(graph.get(node, [])):
+                if nxt in visiting:
+                    reasons.append("supersession_cycle:" + nxt)
+                elif nxt not in visited:
+                    stack.append((nxt, False))
 
     return ClaimAudit(not reasons, False, False, tuple(reasons), len(claims))
 
