@@ -51,7 +51,7 @@ EXCLUSIONS = {"Daniel Gafford": "victim flags contaminated by retracted detector
 # A date-only check is insufficient: a same-day freeze can happen after tip.
 # Neither these clock checks nor SHA digests independently attest source capture.
 _REVISION = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
-_DATE = re.compile(r"^\\d{4}-\\d{2}-\\d{2}$")
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _valid_date(value):
