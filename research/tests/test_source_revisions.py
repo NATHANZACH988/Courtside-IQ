@@ -1,6 +1,7 @@
 """Synthetic regression tests: source revisions must not rewrite old snapshots."""
 from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 import unittest
 
 from research.quality.source_revisions import (
@@ -30,7 +31,7 @@ def revision(n="one", *, sport="NBA", provider="official", series="source:one",
         source_url="https://example.org/source/" + n,
         published_at=published or capture - timedelta(minutes=1),
         captured_at=capture, effective_at=effective or dt(20),
-        raw_sha256=digest or (n[:1] * 64), team_id=team,
+        raw_sha256=digest or sha256(n.encode("utf-8")).hexdigest(), team_id=team,
         rights_status=rights, supersedes=supersedes,
     )
 
