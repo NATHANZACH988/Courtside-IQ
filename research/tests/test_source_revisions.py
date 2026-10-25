@@ -231,9 +231,12 @@ class SourceRevisionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not registered"):
             self.ledger.add_revision(replace(revision(), event_id="nba:unknown"))
 
-    def test_sport_mismatch_rejected(self):
-        with self.assertRaisesRegex(ValueError, "sport mismatch"):
+    def test_cross_sport_event_namespace_rejected(self):
+        # Event IDs are sport-qualified: an NFL record cannot attach to NBA.
+        with self.assertRaisesRegex(ValueError, "not registered"):
             self.ledger.add_revision(revision(sport="NFL"))
+        with self.assertRaisesRegex(ValueError, "sport-scoped"):
+            replace(revision(), sport="NFL")
 
     def test_unknown_team_rejected(self):
         with self.assertRaisesRegex(ValueError, "not part of event"):
