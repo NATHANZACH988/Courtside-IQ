@@ -97,11 +97,11 @@ def audit_claims(document: object) -> ClaimAudit:
             all_claims[cid] = claim
         kind = claim.get("kind")
         scope = claim.get("scope")
-        if kind not in _KINDS if isinstance(kind, str) else True:
+        if not isinstance(kind, str) or kind not in _KINDS:
             reasons.append(p + "_kind_invalid")
-        if scope not in _SCOPES if isinstance(scope, str) else True:
+        if not isinstance(scope, str) or scope not in _SCOPES:
             reasons.append(p + "_scope_invalid")
-        if claim.get("status") not in _STATUSES if isinstance(claim.get("status"), str) else True:
+        if not isinstance(claim.get("status"), str) or claim["status"] not in _STATUSES:
             reasons.append(p + "_status_invalid")
         for key in ("claim_key", "dataset_id", "cohort_id", "method_id"):
             if not _id(claim.get(key)):
@@ -175,6 +175,8 @@ def audit_claims(document: object) -> ClaimAudit:
         supersedes = claim.get("supersedes", [])
         if isinstance(supersedes, list):
             for old in supersedes:
+                if not _id(old):
+                    continue
                 if old not in all_claims:
                     reasons.append(cid + "_unknown_superseded_claim")
                 elif all_claims[old].get("status") != "superseded":
@@ -191,7 +193,7 @@ def audit_claims(document: object) -> ClaimAudit:
                         and later.get("claim_id") not in earlier.get("supersedes", [])):
                     reasons.append("unreconciled_cohort_result:" + str(earlier.get("claim_id")) + ":" + str(later.get("claim_id")))
     # Cyclic supersession would destroy the meaning of 'latest'.
-    graph = {cid: [x for x in claim.get("supersedes", []) if x in all_claims]
+    graph = {cid: [x for x in claim.get("supersedes", []) if _id(x) and x in all_claims]
              for cid, claim in all_claims.items()
              if isinstance(claim.get("supersedes", []), list)}
     visiting: set[str] = set()
