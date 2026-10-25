@@ -1,0 +1,104 @@
+{
+  "_warning": "SYNTHETIC UNIT-TEST FIXTURE — NOT ACTUAL NFL RESULTS OR HISTORICAL SPORTSBOOK EVIDENCE",
+  "batch_id": "test:synthetic-nfl-001",
+  "sport": "NFL",
+  "market": "receiving_yards",
+  "model_version": "model:example-v1",
+  "baseline_version": "baseline:example-v1",
+  "frozen_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "baseline_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluation_protocol_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluation_protocol_frozen_at_utc": "2026-10-25T12:00:00Z",
+  "frozen_manifest_at_utc": "2026-10-25T13:00:00Z",
+  "evaluated_as_of_utc": "2026-10-26T02:00:00Z",
+  "expected_forecast_ids": [
+    "test:one",
+    "test:two",
+    "test:three"
+  ],
+  "forecasts": [
+    {
+      "forecast_id": "test:one",
+      "event_id": "nfl:synthetic-001",
+      "athlete_id": "test:athlete-a",
+      "team_id": "test:team-a",
+      "market": "receiving_yards",
+      "scheduled_start_utc": "2026-10-25T19:00:00Z",
+      "frozen_at_utc": "2026-10-25T12:55:00Z",
+      "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+      "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
+      "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+      "predicted_value": 61,
+      "baseline_value": 62
+    },
+    {
+      "forecast_id": "test:two",
+      "event_id": "nfl:synthetic-001",
+      "athlete_id": "test:athlete-b",
+      "team_id": "test:team-b",
+      "market": "receiving_yards",
+      "scheduled_start_utc": "2026-10-25T19:00:00Z",
+      "frozen_at_utc": "2026-10-25T12:55:00Z",
+      "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+      "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
+      "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+      "predicted_value": 49,
+      "baseline_value": 53
+    },
+    {
+      "forecast_id": "test:three",
+      "event_id": "nfl:synthetic-002",
+      "athlete_id": "test:athlete-c",
+      "team_id": "test:team-c",
+      "market": "receiving_yards",
+      "scheduled_start_utc": "2026-10-25T20:00:00Z",
+      "frozen_at_utc": "2026-10-25T12:55:00Z",
+      "training_data_as_of_utc": "2026-10-25T12:00:00Z",
+      "baseline_frozen_at_utc": "2026-10-25T12:50:00Z",
+      "baseline_data_as_of_utc": "2026-10-25T11:55:00Z",
+      "predicted_value": 80,
+      "baseline_value": 82
+    }
+  ],
+  "settlements": [
+    {
+      "forecast_id": "test:one",
+      "event_id": "nfl:synthetic-001",
+      "athlete_id": "test:athlete-a",
+      "team_id": "test:team-a",
+      "market": "receiving_yards",
+      "status": "final",
+      "actual_value": 65,
+      "source_url": "https://example.org/synthetic-never-live",
+      "published_at_utc": "2026-10-25T23:00:00Z",
+      "captured_at_utc": "2026-10-25T23:01:00Z",
+      "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "forecast_id": "test:two",
+      "event_id": "nfl:synthetic-001",
+      "athlete_id": "test:athlete-b",
+      "team_id": "test:team-b",
+      "market": "receiving_yards",
+      "status": "final",
+      "actual_value": 50,
+      "source_url": "https://example.org/synthetic-never-live",
+      "published_at_utc": "2026-10-25T23:00:00Z",
+      "captured_at_utc": "2026-10-25T23:01:00Z",
+      "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "forecast_id": "test:three",
+      "event_id": "nfl:synthetic-002",
+      "athlete_id": "test:athlete-c",
+      "team_id": "test:team-c",
+      "market": "receiving_yards",
+      "status": "void",
+      "actual_value": null,
+      "source_url": "https://example.org/synthetic-never-live",
+      "published_at_utc": "2026-10-25T23:00:00Z",
+      "captured_at_utc": "2026-10-25T23:01:00Z",
+      "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ]
+}
