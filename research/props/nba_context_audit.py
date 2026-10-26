@@ -64,12 +64,7 @@ class PlayerRoleEvidence:
         if self.injury_source_kind not in {"official_report", "unverified"}:
             raise ValueError("invalid injury source kind")
         if self.expected_minutes is not None:
-            minutes = _positive_stat(self.expected_minutes, "expected_minutes")
-            if minutes > 48:
-                # Not a universal basketball minutes rule (overtime exists);
-                # fail only at a generous validation bound.
-                if minutes > 100:
-                    raise ValueError("implausible expected minutes")
+            _positive_stat(self.expected_minutes, "expected_minutes")
         if not isinstance(self.role, str) or self.role not in _ROLES:
             raise ValueError("unsupported role")
         if not isinstance(self.injury_source, SourceStamp) or not isinstance(
@@ -174,6 +169,9 @@ def audit_nba_prop_context(
     cutoff = _utc(as_of, "as_of")
     board = audit_prop_board(game, roster, markets, screens, projections, quotes, cutoff)
     issues: list[str] = list(board.reasons)
+    missing_quote_candidates = set(board.missing_quote_candidates)
+    if missing_quote_candidates:
+        issues.append("considered_posted_quote_missing")
     counts: dict[str, set[str]] = {
         game.home_team_id: set(), game.away_team_id: set(),
     }
@@ -241,6 +239,8 @@ def audit_nba_prop_context(
             elif screen.team_id != person.team_id:
                 faults.append("screen_team_mismatch")
             if decision == "consider":
+                if f"{person.athlete_id}:{market}" in missing_quote_candidates:
+                    faults.append("considered_posted_quote_missing")
                 projection = projection_map.get((person.athlete_id, market))
                 if projection is None:
                     faults.append("considered_projection_missing")
