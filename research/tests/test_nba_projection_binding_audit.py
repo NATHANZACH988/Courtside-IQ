@@ -214,6 +214,40 @@ class NBAProjectionBindingTests(unittest.TestCase):
         self.assertTrue(result.structurally_valid, result.reasons)
         self.assertEqual(result.rows[0].quote_count, 2)
 
+    def test_duplicate_original_quote_id_fails(self):
+        case = fixture()
+        case[5] = case[5] + (replace(case[5][0], sportsbook="other-book"),)
+        result = audit(case)
+        self.assertIn("duplicate_original_quote_id:quote:one", result.reasons)
+        self.assertFalse(result.structurally_valid)
+
+    def test_conflicting_same_book_side_quote_fails(self):
+        case = fixture()
+        case[5] = case[5] + (replace(case[5][0], quote_id="quote:second",
+                                    line="25.5"),)
+        result = audit(case)
+        self.assertIn("ambiguous_original_book_side_quote:quote:one",
+                      result.reasons)
+        self.assertFalse(result.structurally_valid)
+
+    def test_orphan_original_quote_not_in_roster_fails(self):
+        case = fixture()
+        case[5] = case[5] + (replace(case[5][0], quote_id="quote:other",
+                                    athlete_id="athlete:other",
+                                    sportsbook="other-book"),)
+        self.assertIn("quote_not_in_frozen_player_roster:quote:other",
+                      audit(case).reasons)
+
+    def test_upstream_screen_invalid_does_not_count_projection_bound(self):
+        case = fixture()
+        original_receipt = screen_receipt(case)
+        original_binding = projection_receipt(case)
+        case[3] = (replace(case[3][0], reason="late revision"), case[3][1])
+        result = audit(case, original_receipt, (original_binding,))
+        self.assertEqual(result.bound, 0)
+        self.assertIn("upstream_full_roster_screen_invalid",
+                      result.rows[0].reasons)
+
     def test_duplicate_projection_fails(self):
         case = fixture()
         case[4] = case[4] + (case[4][0],)
