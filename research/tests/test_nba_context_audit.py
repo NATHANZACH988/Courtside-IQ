@@ -45,7 +45,7 @@ def fixture():
     )
     bank = tuple(
         BankedGameEvidence(
-            f"nba:bank-{team.replace(\":\", \"-\")}-{day}", team, "2026-27",
+            f"nba:bank-{team.replace(':', '-')}-{day}", team, "2026-27",
             t(day, 20), stamp(day, 21),
         )
         for team in ("team:home", "team:away") for day in range(18, 23)
