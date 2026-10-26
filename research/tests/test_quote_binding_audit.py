@@ -6,7 +6,9 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timezone, timedelta
 import unittest
 
-from research.props.frozen_batch_audit import FrozenPropSelection
+from research.props.frozen_batch_audit import FrozenPropSelection, audit_frozen_prop_batch
+from research.props.final_chronology_audit import EventFinalReceipt
+from research.props.observed_outcome import ObservedPlayerStat
 from research.props.prop_board import Game, PropQuote, SourceStamp
 from research.props.quote_binding_audit import (
     FrozenQuoteBinding, audit_frozen_quote_bindings,
@@ -62,6 +64,36 @@ class QuoteBindingTests(unittest.TestCase):
         self.assertFalse(result.manifest_completeness_verified)
         self.assertFalse(result.scoring_eligible)
         self.assertFalse(result.official_book_settlement_verified)
+
+    def test_existing_batch_audit_can_change_direction_when_quote_is_replaced(self):
+        # Demonstrates the concrete sibling-PR #20 gap without editing its
+        # historical grading logic. A quote with the same ID but altered line
+        # changes the mathematical outcome, whereas this binding audit blocks it.
+        case = fixture()
+        gm, selection, original, bindings, cutoff = case
+        final_source = SourceStamp("synthetic", "https://example.org/final",
+                                   t(22), t(22, 5), H)
+        final = EventFinalReceipt(gm.event_id, gm.home_team_id,
+                                  gm.away_team_id, t(22), final_source)
+        observed = ObservedPlayerStat(
+            gm.event_id, "athlete:one", "team:home", "points", "full_game",
+            "played", "22", True,
+            SourceStamp("synthetic", "https://example.org/stats",
+                        t(22, 10), t(22, 15), H),
+        )
+        original_grade = audit_frozen_prop_batch(
+            gm, selection, original, (observed,), final, cutoff)
+        altered = (replace(original[0], line="25.5"),)
+        altered_grade = audit_frozen_prop_batch(
+            gm, selection, altered, (observed,), final, cutoff)
+        self.assertEqual(original_grade.rows[0].status, "selected_over")
+        self.assertEqual(altered_grade.rows[0].status, "selected_over_lost")
+        self.assertTrue(altered_grade.structurally_valid)
+        binding_audit = audit_frozen_quote_bindings(
+            gm, selection, altered, bindings, cutoff)
+        self.assertFalse(binding_audit.structurally_valid)
+        self.assertIn("original_quote_content_changed",
+                      binding_audit.rows[0].reasons)
 
     def test_quote_line_mutation_is_detected(self):
         case = fixture()
