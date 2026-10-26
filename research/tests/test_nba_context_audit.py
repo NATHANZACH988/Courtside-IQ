@@ -316,6 +316,21 @@ class NBAContextAuditTests(unittest.TestCase):
         self.assertFalse(result.board_structurally_valid)
         self.assertFalse(result.context_complete)
 
+    def test_missing_real_posted_quote_blocks_context(self):
+        case = fixture()
+        case[5] = ()
+        result = audit(case)
+        self.assertTrue(result.board_structurally_valid)
+        self.assertFalse(result.context_complete)
+        self.assertIn("considered_posted_quote_missing", result.reasons)
+        self.assertIn("considered_posted_quote_missing", result.rows[0].reasons)
+        self.assertFalse(result.play_authorized)
+
+    def test_no_arbitrary_expected_minutes_cap(self):
+        case = fixture()
+        case[7] = (replace(case[7][0], expected_minutes="49.0"),)
+        self.assertTrue(audit(case).context_complete)
+
     def test_no_candidate_does_not_create_a_play(self):
         case = fixture()
         case[3] = (replace(case[3][0], decision="exclude", reason="not qualified"),
