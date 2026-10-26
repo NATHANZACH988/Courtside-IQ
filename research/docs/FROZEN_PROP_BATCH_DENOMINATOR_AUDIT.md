@@ -59,8 +59,10 @@ No outcome or quote is fetched, synthesized or backfilled by this audit.
   official settlement or model-performance claim.
 
 The audit reports counts for `direction_matched`,
-`direction_missed`, `pending`, `invalid`, `pushes`, and
-`dnp_needs_rules`. It **does not** calculate a win rate, ROI, expected
+`direction_missed`, `pending`, `unresolved`, `invalid`,
+`pushes`, and `dnp_needs_rules`. The `denominator_reconciled`
+flag confirms these disjoint categories account for every declared
+frozen selection, without removing unresolved or invalid records. It **does not** calculate a win rate, ROI, expected
 value, or recommend any prop. All trust, settlement and production
 scoring flags are hard-coded false.
 
