@@ -134,6 +134,8 @@ class RosterAthlete:
         _id(self.team_id, "team_id")
         if not isinstance(self.availability, str) or self.availability not in _AVAILABILITY:
             raise ValueError("invalid availability")
+        if not isinstance(self.source, SourceStamp):
+            raise ValueError("roster source must be a SourceStamp")
 
 
 @dataclass(frozen=True)
@@ -208,6 +210,8 @@ class PropQuote:
             raise ValueError("invalid American odds")
         if not isinstance(self.sportsbook, str) or not self.sportsbook.strip():
             raise ValueError("sportsbook required")
+        if not isinstance(self.source, SourceStamp):
+            raise ValueError("quote source must be a SourceStamp")
 
 
 @dataclass(frozen=True)
@@ -352,9 +356,14 @@ def audit_prop_board(
     comparisons: list[PropComparison] = []
     quoted: set[tuple[str, str]] = set()
     quote_keys: set[tuple[str, str, str, str, str]] = set()
+    quote_ids: set[str] = set()
     for quote in quotes:
         if not isinstance(quote, PropQuote):
             raise TypeError("quotes contain non-PropQuote")
+        if quote.quote_id in quote_ids:
+            reasons.append("duplicate_quote_id:" + quote.quote_id)
+            continue
+        quote_ids.add(quote.quote_id)
         pair = (quote.athlete_id, quote.market)
         qkey = (quote.athlete_id, quote.market, quote.period, quote.side,
                 quote.sportsbook.casefold())
