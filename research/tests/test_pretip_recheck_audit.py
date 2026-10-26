@@ -356,6 +356,39 @@ class PretipRecheckTests(unittest.TestCase):
         self.assertEqual(len(result.rows), 2)
         self.assertTrue(result.all_original_lines_still_observed)
 
+    def test_earlier_wrong_player_snapshot_cannot_be_hidden_by_later_good_one(self):
+        case = fixture()
+        earlier = replace(case[4][0], athlete_id="athlete:other",
+                          source=stamp(t(19, 20), t(19, 25)))
+        case[4] = (earlier, case[4][0])
+        result = audit(case)
+        self.assertEqual(result.rows[0].status, "invalid")
+        self.assertIn("recheck_lineage_contains_identity_mismatch",
+                      result.rows[0].reasons)
+
+    def test_earlier_wrong_market_snapshot_cannot_be_hidden(self):
+        case = fixture()
+        earlier = replace(case[4][0], market="rebounds",
+                          source=stamp(t(19, 20), t(19, 25)))
+        case[4] = (earlier, case[4][0])
+        self.assertIn("recheck_lineage_contains_identity_mismatch",
+                      audit(case).rows[0].reasons)
+
+    def test_earlier_prefreeze_snapshot_cannot_be_hidden(self):
+        case = fixture()
+        earlier = replace(case[4][0],
+                          source=stamp(t(18, 30), t(18, 40)))
+        case[4] = (earlier, case[4][0])
+        self.assertIn("recheck_lineage_contains_prefreeze_capture",
+                      audit(case).rows[0].reasons)
+
+    def test_invalid_status_and_side_types_fail_closed(self):
+        case = fixture()
+        with self.assertRaises(ValueError):
+            replace(case[4][0], status=["open"])
+        with self.assertRaises(ValueError):
+            replace(case[4][0], side=["over"])
+
     def test_latest_market_recheck_not_tied_to_result_after_tip(self):
         case = fixture()
         result = audit(case)
