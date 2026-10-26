@@ -65,6 +65,23 @@ class FrozenPropBatchTests(unittest.TestCase):
         self.assertEqual(result.rows[2].status, "pending")
         self.assertIn("player_outcome_missing", result.rows[2].reasons)
 
+    def test_every_original_selection_reconciles_to_exactly_one_status(self):
+        result = audit(fixture())
+        total = (result.pending + result.unresolved + result.invalid +
+                 result.dnp_needs_rules + result.pushes +
+                 result.direction_matched + result.direction_missed)
+        self.assertTrue(result.denominator_reconciled)
+        self.assertEqual(total, result.declared_frozen_denominator)
+
+    def test_unknown_stat_counted_explicitly_in_denominator(self):
+        case = fixture()
+        case[3] = (replace(case[3][0], participation="unknown",
+                           actual_stat=None, source=None), case[3][1])
+        result = audit(case)
+        self.assertEqual(result.unresolved, 1)
+        self.assertEqual(result.direction_matched, 0)
+        self.assertTrue(result.denominator_reconciled)
+
     def test_original_order_preserved_no_winners_only_filter(self):
         case = fixture()
         self.assertEqual([r.selection_id for r in audit(case).rows],
