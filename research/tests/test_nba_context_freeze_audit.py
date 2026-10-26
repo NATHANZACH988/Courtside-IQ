@@ -84,14 +84,13 @@ class NBAContextFreezeTests(unittest.TestCase):
 
     def test_projection_inputs_moved_after_bank_receipt_restores_context(self):
         case = late_bank(fixture())
-        case[4] = (replace(case[4][0], inputs_as_of=t(25, 14)),)
         # A model frozen at 13:00 cannot claim 14:00 inputs.
         with self.assertRaises(ValueError):
-            audit(case)
+            replace(case[4][0], inputs_as_of=t(25, 14))
 
     def test_legitimate_later_projection_freeze_can_use_later_bank(self):
         case = late_bank(fixture())
-        case[4] = (replace(case[4][0], frozen_at=t(25, 14),
+        case[4] = (replace(case[4][0], frozen_at=t(25, 14, 30),
                            inputs_as_of=t(25, 14)),)
         # The original quote was captured at 14:00; this cannot become
         # an independently projected-before-market quote.
