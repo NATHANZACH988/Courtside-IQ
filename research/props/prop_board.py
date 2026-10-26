@@ -85,7 +85,7 @@ class Game:
     scheduled_start: datetime
 
     def __post_init__(self) -> None:
-        if self.sport not in SPORT_MARKETS:
+        if not isinstance(self.sport, str) or self.sport not in SPORT_MARKETS:
             raise ValueError("unsupported sport")
         _id(self.event_id, "event_id")
         if not self.event_id.startswith(self.sport.lower() + ":"):
@@ -204,7 +204,7 @@ class PropQuote:
             raise ValueError("market is required")
         if self.period != "full_game":
             raise ValueError("only explicit full_game markets are supported")
-        if self.side not in {"over", "under"}:
+        if not isinstance(self.side, str) or self.side not in {"over", "under"}:
             raise ValueError("side must be over or under")
         if type(self.american_odds) is not int or -100 < self.american_odds < 100:
             raise ValueError("invalid American odds")
@@ -276,8 +276,8 @@ def audit_prop_board(
         raise ValueError("pregame as_of must precede scheduled start")
     reasons: list[str] = []
     if (not isinstance(markets, tuple) or not markets or
-            len(set(markets)) != len(markets) or
-            any(not isinstance(m, str) or m not in SPORT_MARKETS[game.sport] for m in markets)):
+            any(not isinstance(m, str) or m not in SPORT_MARKETS[game.sport] for m in markets) or
+            len(set(markets)) != len(markets)):
         raise ValueError("markets must be unique supported player stat markets")
 
     def visible(source: SourceStamp, label: str) -> bool:
