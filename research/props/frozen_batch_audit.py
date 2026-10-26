@@ -57,12 +57,14 @@ class FrozenPropBatchAudit:
     declared_frozen_denominator: int
     rows: tuple[FrozenPropRow, ...]
     pending: int
+    unresolved: int
     invalid: int
     dnp_needs_rules: int
     pushes: int
     direction_matched: int
     direction_missed: int
     unselected_observation_records: int
+    denominator_reconciled: bool
     structurally_valid: bool
     reasons: tuple[str, ...]
     source_independently_verified: bool = False
@@ -194,18 +196,27 @@ def audit_frozen_prop_batch(
         reasons.append("invalid_frozen_selections_present")
     matched = {"selected_over", "selected_under"}
     missed = {"selected_over_lost", "selected_under_lost"}
+    known_statuses = matched | missed | {
+        "pending", "unresolved", "invalid", "dnp_needs_rules", "push",
+    }
+    reconciled = all(row.status in known_statuses for row in rows)
+    if not reconciled:
+        reasons.append("unrecognized_outcome_status")
     return FrozenPropBatchAudit(
         event_id=game.event_id, reviewed_at=cutoff,
         declared_frozen_denominator=len(selections),
         rows=tuple(rows),
         pending=sum(row.status == "pending" for row in rows),
+        unresolved=sum(row.status == "unresolved" for row in rows),
         invalid=sum(row.status == "invalid" for row in rows),
         dnp_needs_rules=sum(row.status == "dnp_needs_rules" for row in rows),
         pushes=sum(row.status == "push" for row in rows),
         direction_matched=sum(row.status in matched for row in rows),
         direction_missed=sum(row.status in missed for row in rows),
         unselected_observation_records=unselected,
-        structurally_valid=not any(row.status == "invalid" for row in rows) and
+        denominator_reconciled=reconciled,
+        structurally_valid=reconciled and
+                           not any(row.status == "invalid" for row in rows) and
                            bool(selections) and cutoff > game.scheduled_start,
         reasons=tuple(reasons),
     )
