@@ -380,6 +380,28 @@ class PropBoardTests(unittest.TestCase):
         self.assertIn("projection_not_screened_consider:athlete:other",
                       audit(case).reasons)
 
+    def test_duplicate_quote_identifier_rejected_across_books(self):
+        case = list(board())
+        q = case[5][0]
+        case[5] = (q, replace(q, sportsbook="another-book"))
+        self.assertIn("duplicate_quote_id:quote:one", audit(case).reasons)
+
+    def test_fake_roster_and_market_source_rejected(self):
+        with self.assertRaisesRegex(ValueError, "SourceStamp"):
+            replace(board()[1][0], source={"captured_at": t(14)})
+        with self.assertRaisesRegex(ValueError, "SourceStamp"):
+            replace(board()[5][0], source={"captured_at": t(14)})
+
+    def test_unhashable_sport_side_and_market_fail_closed(self):
+        with self.assertRaises(ValueError):
+            Game(["NBA"], "nba:fake", "team:home", "team:away", t(20))
+        with self.assertRaises(ValueError):
+            replace(board()[5][0], side=["over"])
+        case = list(board())
+        case[2] = (["points"],)
+        with self.assertRaisesRegex(ValueError, "markets must"):
+            audit(case)
+
     def test_market_changes_do_not_change_projection(self):
         original = board()[4][0]
         self.assertEqual(original.predicted_stat, "21.5")
