@@ -1,0 +1,83 @@
+{
+  "schema_version": "oct24_external_boxscore_reconciliation_v1",
+  "research_only": true,
+  "production_scoring_authorized": false,
+  "independently_verified": false,
+  "frozen_manifest": {
+    "repo_path": "research/gameflow/predictions-2026-10-24.json",
+    "branch": "pax/full-roster-predictions",
+    "blob_sha": "61a973e2a1e41590045c1cbdcb053cc684d3e563",
+    "built_at_utc": "2026-10-24T12:43:09.323745+00:00",
+    "commit_at_utc": "2026-10-24T12:57:25Z",
+    "earliest_tip_utc": "2026-10-24T22:00Z",
+    "predictions": 53,
+    "events": 8,
+    "thin_sample": 11,
+    "original_nonnull_grades": 0
+  },
+  "external_final_stats": {
+    "retrieved_date_utc": "2026-10-26",
+    "source": "ESPN public NBA summary",
+    "source_is_immutable_pregame_archive": false,
+    "all_events_final": true,
+    "positions_are_coarse_proxy": true,
+    "original_watcher_notes_available": false,
+    "event_ids": [
+      "401909853",
+      "401909854",
+      "401909855",
+      "401909856",
+      "401909857",
+      "401909858",
+      "401909859",
+      "401909860"
+    ]
+  },
+  "outcomes": {
+    "FOUL_CAP": {
+      "declared": 30,
+      "numeric_hit": 2,
+      "no_decision": 2,
+      "requires_watcher_notes": 26
+    },
+    "CANNIBAL": {
+      "declared": 12,
+      "proxy_hit": 1,
+      "proxy_miss": 11
+    },
+    "VICTIM": {
+      "declared": 10,
+      "numeric_hit": 1,
+      "proxy_hit": 1,
+      "proxy_miss": 8
+    },
+    "STEADY": {
+      "declared": 1,
+      "numeric_miss": 1
+    }
+  },
+  "pax_reported": {
+    "hit": 6,
+    "miss": 45,
+    "no_decision": 2,
+    "independently_reproduced": false
+  },
+  "ticket_study": {
+    "v1_reported_total_legs": 254,
+    "v1_rows_total_including_control": 258,
+    "v1_strategy_rows_total": 254,
+    "v1_anti_control_legs": 4,
+    "cold_losses_v1_named_categories": 60,
+    "cold_losses_v2_decomposition": 61,
+    "cohort_definitions_reconciled": false
+  },
+  "unresolved": [
+    "original watcher final files",
+    "foul notes and retraction history",
+    "source receipts and original frozen research inputs",
+    "player ID and position alignment",
+    "original graded sibling artifact",
+    "historical sportsbook quotes",
+    "ticket-study and projection evaluation datasets"
+  ]
+}
