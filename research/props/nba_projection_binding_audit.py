@@ -164,10 +164,21 @@ def audit_nba_projection_bindings(
     receipt_counts = Counter((r.athlete_id, r.market) for r in projection_receipts)
     receipt_by_key = {(r.athlete_id, r.market): r for r in projection_receipts}
     quotes_by_key: dict[tuple[str, str], list[PropQuote]] = {}
+    quote_id_counts = Counter(q.quote_id for q in quotes)
+    book_side_counts = Counter((q.athlete_id, q.market, q.period, q.side,
+                                q.sportsbook.casefold()) for q in quotes)
     issues: list[str] = list(parent.reasons)
 
     for quote in quotes:
         key = (quote.athlete_id, quote.market)
+        if quote_id_counts[quote.quote_id] != 1:
+            issues.append("duplicate_original_quote_id:" + quote.quote_id)
+        if book_side_counts[(quote.athlete_id, quote.market, quote.period,
+                             quote.side, quote.sportsbook.casefold())] != 1:
+            issues.append("ambiguous_original_book_side_quote:" + quote.quote_id)
+        roster_person = roster_by_id.get(quote.athlete_id)
+        if roster_person is None or quote.team_id != roster_person.team_id:
+            issues.append("quote_not_in_frozen_player_roster:" + quote.quote_id)
         if quote.event_id != game.event_id or quote.team_id not in {
                 game.home_team_id, game.away_team_id}:
             issues.append("quote_wrong_event_or_team:" + quote.quote_id)
@@ -192,6 +203,8 @@ def audit_nba_projection_bindings(
     for athlete_id, market in sorted(considered):
         key = (athlete_id, market)
         faults: list[str] = []
+        if not parent.structurally_valid:
+            faults.append("upstream_full_roster_screen_invalid")
         person = roster_by_id.get(athlete_id)
         if person is None:
             faults.append("athlete_not_in_frozen_roster")
