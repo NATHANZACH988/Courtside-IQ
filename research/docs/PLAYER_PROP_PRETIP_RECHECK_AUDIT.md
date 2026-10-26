@@ -54,6 +54,9 @@ does not impose them on production or claim they are calibrated.
 - For repeated market observations, the **latest capture time wins**,
   never the more favorable price. Conflicting observations at exactly
   the same latest timestamp are invalid rather than cherry-picked.
+  **Every supplied earlier recheck** is also screened for wrong-player,
+  wrong-market, prefreeze and wrong-book contamination; a clean later
+  snapshot cannot conceal a malformed earlier record.
 - The latest capture must be after selection freeze, before tipoff,
   available by the pretip cutoff and within the explicit freshness
   threshold. Published-at must not predate the original selection freeze.
