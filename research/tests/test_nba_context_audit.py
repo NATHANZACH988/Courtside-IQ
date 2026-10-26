@@ -45,7 +45,7 @@ def fixture():
     )
     bank = tuple(
         BankedGameEvidence(
-            f"nba:bank-{team}-{day}", team, "2026-27",
+            f"nba:bank-{team.replace(\":\", \"-\")}-{day}", team, "2026-27",
             t(day, 20), stamp(day, 21),
         )
         for team in ("team:home", "team:away") for day in range(18, 23)
@@ -91,7 +91,7 @@ class NBAContextAuditTests(unittest.TestCase):
 
     def test_bank_below_five_blocks_context(self):
         case = fixture()
-        case[6] = tuple(b for b in case[6] if b.event_id != "nba:bank-team:away-22")
+        case[6] = tuple(b for b in case[6] if b.event_id != "nba:bank-team-away-22")
         result = audit(case)
         self.assertFalse(result.five_game_bank_met)
         self.assertIn("five_game_bank_not_met", result.rows[0].reasons)
