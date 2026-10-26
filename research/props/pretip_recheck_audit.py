@@ -44,11 +44,13 @@ class PretipMarketRecheck:
             _id(getattr(self, label), label)
         if not isinstance(self.market, str) or not self.market.strip():
             raise ValueError("market required")
-        if self.period != "full_game" or self.side not in {"over", "under"}:
+        if (self.period != "full_game" or not isinstance(self.side, str) or
+                self.side not in {"over", "under"}):
             raise ValueError("explicit full_game and over/under required")
         if not isinstance(self.sportsbook, str) or not self.sportsbook.strip():
             raise ValueError("sportsbook required")
-        if self.status not in {"open", "suspended", "withdrawn", "unknown"}:
+        if (not isinstance(self.status, str) or
+                self.status not in {"open", "suspended", "withdrawn", "unknown"}):
             raise ValueError("unsupported recheck status")
         if not isinstance(self.source, SourceStamp):
             raise ValueError("source must be SourceStamp")
@@ -200,6 +202,23 @@ def audit_pretip_market_rechecks(
                     faults.append("binding_published_before_original_quote")
 
         candidates = rechecks_by_quote.get(selection.quote_id, ())
+        # Validate the entire declared observation lineage. A later valid
+        # record must not conceal an earlier wrong-player or post-freeze
+        # cross-market record supplied under the same original quote ID.
+        for historical in candidates:
+            if historical.source.captured_at <= selection.frozen_at:
+                faults.append("recheck_lineage_contains_prefreeze_capture")
+            if historical.source.published_at < selection.frozen_at:
+                faults.append("recheck_lineage_contains_prefreeze_publication")
+            if quote is not None and (
+                    historical.event_id != quote.event_id or
+                    historical.athlete_id != quote.athlete_id or
+                    historical.team_id != quote.team_id or
+                    historical.market != quote.market or
+                    historical.period != quote.period or
+                    historical.side != quote.side or
+                    historical.sportsbook.casefold() != quote.sportsbook.casefold()):
+                faults.append("recheck_lineage_contains_identity_mismatch")
         latest: PretipMarketRecheck | None = None
         if not candidates:
             faults.append("missing_pretip_recheck")
