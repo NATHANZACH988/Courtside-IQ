@@ -489,7 +489,7 @@ class TestCaptureLossAudit(unittest.TestCase):
     def test_duplicate_source_stat_labels_fail_closed(self):
         raw = source()
         labels = raw["boxscore"]["players"][0]["statistics"][0]["labels"]
-        labels[2] = "AST"
+        labels[3] = "AST"
         with self.assertRaisesRegex(ValueError, "duplicate source stat labels"):
             AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
 
