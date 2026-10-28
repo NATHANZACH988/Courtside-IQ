@@ -349,6 +349,8 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
         "status": player_status,
     }
     for label, aliases in {
+        "PTS": ("pts",),
+        "REB": ("reb",),
         "AST": ("ast",),
         "3PT": ("threes", "three_attempts"),
         "STL": ("stl",),
