@@ -385,6 +385,52 @@ class TestCaptureLossAudit(unittest.TestCase):
         self.assertEqual(result["sections"]["player_identity"]["status"], "not_in_source")
         self.assertIn("player_identity", result["not_in_source"])
 
+    def test_second_source_stat_group_is_counted_in_full_roster(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0])
+        second["athletes"][0]["athlete"]["displayName"] = "Second Group Player"
+        raw["boxscore"]["players"][0]["statistics"].append(second)
+        captured = complete_capture(raw)  # Only the first group's athlete.
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        identity = result["sections"]["player_identity"]
+        self.assertEqual(identity["source_items"], 2)
+        self.assertEqual(identity["missing_items"], 1)
+        self.assertEqual(identity["status"], "partial")
+        assists = result["sections"]["player_ast"]
+        self.assertEqual(assists["source_items"], 2)
+        self.assertEqual(assists["status"], "partial")
+        self.assertFalse(result["available_fields_structurally_retained"])
+
+    def test_second_source_stat_group_can_be_fully_retained(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0])
+        second["athletes"][0]["athlete"]["displayName"] = "Second Group Player"
+        raw["boxscore"]["players"][0]["statistics"].append(second)
+        captured = complete_capture(raw)
+        extra = dict(captured["players"][0])
+        extra["name"] = "Second Group Player"
+        captured["players"].append(extra)
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_identity"]["status"], "retained")
+        self.assertEqual(result["sections"]["player_ast"]["status"], "retained")
+        self.assertTrue(result["available_fields_structurally_retained"])
+
+    def test_malformed_second_stat_group_fails_closed(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0])
+        second["athletes"][0]["athlete"]["displayName"] = "Second Group Player"
+        second["athletes"][0]["stats"] = ["20"]
+        raw["boxscore"]["players"][0]["statistics"].append(second)
+        with self.assertRaisesRegex(ValueError, "labels/stats length mismatch"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_duplicate_player_across_stat_groups_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"].append(
+            copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]))
+        with self.assertRaisesRegex(ValueError, "ambiguous source player identity"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
     def test_source_stats_shorter_than_labels_fail_closed(self):
         raw = source()
         raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"] = ["20", "5"]
