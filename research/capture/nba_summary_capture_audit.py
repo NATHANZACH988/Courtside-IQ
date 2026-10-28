@@ -109,8 +109,17 @@ def _made_attempted(value: Any) -> tuple[int, int] | None:
 
 def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
                    aliases: tuple[str, ...]) -> dict:
+    """Keep absent, partially retained and corrupted player stats distinct.
+
+    A captured value that disagrees with the source is not discarded: it is
+    altered/unreconciled. Counts describe rows with at least one stored field,
+    not merely rows whose values happen to match the supplied source.
+    """
     observed = 0
-    preserved = 0
+    captured = 0
+    retained = 0
+    partial = 0
+    altered = 0
     for identity, stats in raw_players.items():
         if label not in stats:
             continue
@@ -119,14 +128,41 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
         if expected is None:
             continue
         observed += 1
-        player = stored_players.get(identity, {})
-        actual = tuple(_integer(player.get(key)) for key in aliases)
-        if label in ("3PT", "FT"):
-            if actual == expected:
-                preserved += 1
-        elif len(actual) == 1 and actual[0] == expected:
-            preserved += 1
-    return _count(observed, preserved)
+        player = stored_players.get(identity)
+        if player is None:
+            continue
+        present = [key in player for key in aliases]
+        if not any(present):
+            continue
+        captured += 1
+        if not all(present):
+            partial += 1
+            continue
+        actual = tuple(_integer(player[key]) for key in aliases)
+        if (actual == expected if label in ("3PT", "FT")
+                else len(actual) == 1 and actual[0] == expected):
+            retained += 1
+        else:
+            altered += 1
+
+    if not observed:
+        status = "not_in_source"
+    elif altered:
+        status = "altered_or_unreconciled"
+    elif retained == observed:
+        status = "retained"
+    elif not captured:
+        status = "discarded"
+    else:
+        status = "partial"
+    return {
+        "source_items": observed,
+        "captured_items": captured,
+        "retained_items": retained,
+        "partial_items": partial,
+        "altered_items": altered,
+        "status": status,
+    }
 
 
 def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:

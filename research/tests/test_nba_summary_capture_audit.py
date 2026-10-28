@@ -121,14 +121,63 @@ class TestCaptureLossAudit(unittest.TestCase):
         captured = complete_capture(raw)
         captured["players"][0]["ast"] = 6
         result = AUDIT.audit_nba_summary_capture(raw, captured)
-        self.assertEqual(result["sections"]["player_ast"]["status"], "discarded")
+        self.assertEqual(result["sections"]["player_ast"]["status"], "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["player_ast"]["captured_items"], 1)
+        self.assertEqual(result["sections"]["player_ast"]["altered_items"], 1)
 
     def test_threes_require_makes_and_attempts(self):
         raw = source()
         captured = complete_capture(raw)
         captured["players"][0].pop("three_attempts")
         result = AUDIT.audit_nba_summary_capture(raw, captured)
-        self.assertEqual(result["sections"]["player_3pt"]["status"], "discarded")
+        self.assertEqual(result["sections"]["player_3pt"]["status"], "partial")
+        self.assertEqual(result["sections"]["player_3pt"]["captured_items"], 1)
+        self.assertEqual(result["sections"]["player_3pt"]["partial_items"], 1)
+
+    def test_wrong_three_point_attempts_are_altered_not_missing(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0]["three_attempts"] = 7
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_3pt"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+        self.assertEqual(section["captured_items"], 1)
+        self.assertEqual(section["altered_items"], 1)
+
+    def test_mixed_retained_and_missing_players_is_partial(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])
+        second["athlete"]["displayName"] = "Second Player"
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"].append(second)
+        captured = complete_capture(raw)
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_ast"]
+        self.assertEqual(section["source_items"], 2)
+        self.assertEqual(section["captured_items"], 1)
+        self.assertEqual(section["retained_items"], 1)
+        self.assertEqual(section["status"], "partial")
+
+    def test_mixed_valid_and_corrupted_players_is_altered(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])
+        second["athlete"]["displayName"] = "Second Player"
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"].append(second)
+        captured = complete_capture(raw)
+        captured["players"].append({
+            "team": "AAA", "name": "Second Player", "ast": 9,
+        })
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_ast"]
+        self.assertEqual(section["source_items"], 2)
+        self.assertEqual(section["captured_items"], 2)
+        self.assertEqual(section["retained_items"], 1)
+        self.assertEqual(section["altered_items"], 1)
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+
+    def test_invalid_present_stat_is_altered(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0]["ast"] = "not-a-number"
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_ast"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+        self.assertEqual(section["altered_items"], 1)
 
     def test_zero_is_a_valid_captured_stat(self):
         raw = source()
