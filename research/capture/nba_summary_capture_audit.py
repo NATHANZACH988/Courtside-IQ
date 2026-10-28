@@ -277,6 +277,32 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
 
     source_players = _raw_players(raw)
     stored_players = _captured_players(captured)
+
+    # A forged or misattributed player must not disappear from the audit just
+    # because the source players' individual stat fields match. Treat the
+    # identity universe as an independently reconciled evidence section.
+    source_ids, captured_ids = set(source_players), set(stored_players)
+    matched = source_ids & captured_ids
+    missing = source_ids - captured_ids
+    unexpected = captured_ids - source_ids
+    if unexpected:
+        player_status = "altered_or_unreconciled"
+    elif not source_ids:
+        player_status = "not_in_source"
+    elif not matched:
+        player_status = "discarded"
+    elif missing:
+        player_status = "partial"
+    else:
+        player_status = "retained"
+    sections["player_identity"] = {
+        "source_items": len(source_ids),
+        "captured_items": len(captured_ids),
+        "matched_items": len(matched),
+        "missing_items": len(missing),
+        "unexpected_items": len(unexpected),
+        "status": player_status,
+    }
     for label, aliases in {
         "AST": ("ast",),
         "3PT": ("threes", "three_attempts"),
