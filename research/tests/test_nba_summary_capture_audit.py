@@ -90,7 +90,9 @@ class TestCaptureLossAudit(unittest.TestCase):
         captured["officials"] = []
         result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["officials"]["status"], "not_in_source")
-        self.assertEqual(result["sections"]["play_clocks"]["status"], "not_in_source")
+        # Extra captured clocks without source events are unverified, not retained.
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
         self.assertFalse(result["complete_source_surface_observed"])
 
     def test_partial_play_by_play(self):
