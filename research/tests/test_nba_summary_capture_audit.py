@@ -80,9 +80,75 @@ class TestCaptureLossAudit(unittest.TestCase):
         group = raw["boxscore"]["players"][0]["statistics"][0]
         group["labels"].pop(0)
         group["athletes"][0]["stats"].pop(0)
-        result = AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+        captured = complete_capture(source())
+        captured["players"][0].pop("pts")
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["player_pts"]["status"], "not_in_source")
         self.assertFalse(result["complete_source_surface_observed"])
+
+    def test_captured_points_absent_from_source_are_unreconciled(self):
+        raw = source()
+        group = raw["boxscore"]["players"][0]["statistics"][0]
+        group["labels"].pop(0)
+        group["athletes"][0]["stats"].pop(0)
+        result = AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+        pts = result["sections"]["player_pts"]
+        self.assertEqual(pts["source_items"], 0)
+        self.assertEqual(pts["unexpected_items"], 1)
+        self.assertEqual(pts["status"], "altered_or_unreconciled")
+        self.assertFalse(result["available_fields_structurally_retained"])
+
+    def test_unverified_single_three_point_component_is_unreconciled(self):
+        raw = source()
+        group = raw["boxscore"]["players"][0]["statistics"][0]
+        group["labels"].remove("3PT")
+        group["athletes"][0]["stats"].pop(3)
+        captured = complete_capture(source())
+        captured["players"][0].pop("three_attempts")
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        threes = result["sections"]["player_3pt"]
+        self.assertEqual(threes["unexpected_items"], 1)
+        self.assertEqual(threes["status"], "altered_or_unreconciled")
+
+    def test_dnp_player_with_fabricated_points_is_unreconciled(self):
+        raw = source()
+        dnp = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])
+        dnp["athlete"]["displayName"] = "DNP Player"
+        dnp["didNotPlay"] = True
+        dnp["stats"] = []
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"].append(dnp)
+        captured = complete_capture(raw)
+        captured["players"].append({"team": "AAA", "name": "DNP Player", "pts": 12})
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_identity"]["status"], "retained")
+        pts = result["sections"]["player_pts"]
+        self.assertEqual(pts["unexpected_items"], 1)
+        self.assertEqual(pts["status"], "altered_or_unreconciled")
+
+    def test_mixed_player_rows_with_unverified_stat_fail_closed(self):
+        raw = source()
+        group = raw["boxscore"]["players"][0]["statistics"][0]
+        second = copy.deepcopy(group["athletes"][0])
+        second["athlete"]["displayName"] = "Second Player"
+        second["stats"].pop(0)
+        group["athletes"].append(second)
+        # ESPN can supply different label sets in separate stat groups.
+        group["athletes"].pop()
+        raw["boxscore"]["players"][0]["statistics"].append({
+            "labels": group["labels"][1:],
+            "athletes": [second],
+        })
+        captured = complete_capture(source())
+        extra = dict(captured["players"][0])
+        extra["name"] = "Second Player"
+        captured["players"].append(extra)
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        pts = result["sections"]["player_pts"]
+        self.assertEqual(pts["source_items"], 1)
+        self.assertEqual(pts["retained_items"], 1)
+        self.assertEqual(pts["unexpected_items"], 1)
+        self.assertEqual(pts["status"], "altered_or_unreconciled")
+        self.assertFalse(result["available_fields_structurally_retained"])
 
     def test_missing_points_are_detected_even_when_other_stats_match(self):
         raw = source()

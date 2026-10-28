@@ -163,8 +163,15 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
     retained = 0
     partial = 0
     altered = 0
+    unexpected = 0
     for identity, stats in raw_players.items():
+        player = stored_players.get(identity)
         if label not in stats:
+            # A value in the compact capture is not authenticated merely
+            # because the source omitted that statistic. This also applies
+            # to explicitly marked DNP athletes with identity-only rows.
+            if player is not None and any(key in player for key in aliases):
+                unexpected += 1
             continue
         expected = (_made_attempted(stats[label]) if label in ("3PT", "FT")
                     else _integer(stats[label]))
@@ -174,7 +181,6 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
         if expected is None or (isinstance(expected, int) and expected < 0):
             raise ValueError(f"invalid source {label} stat for {identity}")
         observed += 1
-        player = stored_players.get(identity)
         if player is None:
             continue
         present = [key in player for key in aliases]
@@ -195,10 +201,10 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
         else:
             retained += 1
 
-    if not observed:
-        status = "not_in_source"
-    elif altered:
+    if altered or unexpected:
         status = "altered_or_unreconciled"
+    elif not observed:
+        status = "not_in_source"
     elif retained == observed:
         status = "retained"
     elif not captured:
@@ -211,6 +217,7 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
         "retained_items": retained,
         "partial_items": partial,
         "altered_items": altered,
+        "unexpected_items": unexpected,
         "status": status,
     }
 
