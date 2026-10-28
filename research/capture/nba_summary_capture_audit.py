@@ -87,6 +87,31 @@ def _ordered_subset_coverage(source_items: list, captured_items: list) -> dict:
     return _count(source_count, captured_count)
 
 
+def _source_team_statistics(raw: dict) -> list:
+    """Reject malformed present team stats before evaluating capture loss.
+
+    Empty or absent team-stat arrays remain unobservable, not retained.
+    """
+    teams = _require_list(_path(raw, "boxscore", "teams"), "source teams")
+    observed = []
+    for index, team in enumerate(teams):
+        if not isinstance(team, dict):
+            raise ValueError(f"invalid source team record at {index}")
+        statistics = team.get("statistics")
+        if statistics is None:
+            continue
+        if not isinstance(statistics, list):
+            raise ValueError(f"invalid source team statistics at {index}")
+        if any(not isinstance(item, dict) for item in statistics):
+            raise ValueError(f"invalid source team statistic at {index}")
+        if statistics:
+            abbreviation = _path(team, "team", "abbreviation")
+            if not isinstance(abbreviation, str) or not abbreviation:
+                raise ValueError(f"source team identity missing at {index}")
+            observed.append(team)
+    return observed
+
+
 def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
     rows: dict[tuple[str, str], dict] = {}
     for group in _require_list(_path(raw, "boxscore", "players"), "source player groups"):
@@ -316,10 +341,7 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
     source_officials = _first_list(
         raw, (("officials",), ("header", "competitions", 0, "officials")))
     stored_officials = _first_list(captured, (("officials",),))
-    source_teams = [
-        team for team in _require_list(_path(raw, "boxscore", "teams"), "source teams")
-        if isinstance(team, dict) and team.get("statistics")
-    ]
+    source_teams = _source_team_statistics(raw)
     stored_teams = _first_list(captured, (("team_stats",), ("team_statistics",)))
     sections = {
         "play_by_play": _play_coverage(source_plays, stored_plays),
