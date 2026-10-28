@@ -21,7 +21,8 @@ Checks include:
 - Event identity and canonical digest of the *supplied* summary.
 - Exact equality of play-by-play, officials and team-statistic arrays when
   they are present on both sides.
-- Play-clock and shot-coordinate counts and value equality.
+- Play-clock and shot-coordinate comparison **bound to unique play IDs**, so a clock or shot location moved to another event is not incorrectly marked retained.
+- Partial play-by-play is accepted only for an exact, ordered subset with unique play IDs; fabricated, duplicated, or altered plays are unreconciled.
 - Player-level equality for AST, 3PT makes/attempts, STL, BLK, TO and FT
   makes/attempts, matched by team abbreviation plus display name.
 - Duplicate or missing player identities, partial captures and conflicting
@@ -62,6 +63,7 @@ fixtures, not purported ESPN finals.
   The separate `complete_source_surface_observed` flag remains false.
 - The generic summary shape may change. Fields not recognized by this version
   are not checked. The output does not certify comprehensive ESPN coverage.
+- Play IDs are treated as identity keys for this offline diagnostic. Missing or duplicated IDs are classified as unreconciled rather than silently matched; this does not independently authenticate ESPN event identities.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
   traded-player identity. Ambiguous same-team names are rejected.
