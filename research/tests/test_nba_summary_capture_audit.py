@@ -249,6 +249,49 @@ class TestCaptureLossAudit(unittest.TestCase):
         result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["player_ast"]["status"], "discarded")
 
+    def test_unexpected_captured_player_cannot_pass_as_retained(self):
+        raw = source()
+        captured = complete_capture(raw)
+        fabricated = dict(captured["players"][0])
+        fabricated["name"] = "Fabricated Player"
+        captured["players"].append(fabricated)
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        identity = result["sections"]["player_identity"]
+        self.assertEqual(identity["status"], "altered_or_unreconciled")
+        self.assertEqual(identity["unexpected_items"], 1)
+        self.assertIn("player_identity", result["lost_or_unreconciled"])
+        self.assertFalse(result["available_fields_structurally_retained"])
+        # Matching original stats do not excuse an invented extra athlete.
+        self.assertEqual(result["sections"]["player_ast"]["status"], "retained")
+
+    def test_missing_captured_player_is_partial_identity_coverage(self):
+        raw = source()
+        second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])
+        second["athlete"]["displayName"] = "Second Player"
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"].append(second)
+        result = AUDIT.audit_nba_summary_capture(raw, complete_capture(raw))
+        identity = result["sections"]["player_identity"]
+        self.assertEqual(identity["status"], "partial")
+        self.assertEqual(identity["matched_items"], 1)
+        self.assertEqual(identity["missing_items"], 1)
+
+    def test_captured_player_without_source_player_is_unreconciled(self):
+        raw = source()
+        raw["boxscore"]["players"] = []
+        result = AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+        self.assertEqual(result["sections"]["player_identity"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["player_identity"]["unexpected_items"], 1)
+
+    def test_no_source_or_captured_players_is_unobservable(self):
+        raw = source()
+        raw["boxscore"]["players"] = []
+        captured = complete_capture(source())
+        captured["players"] = []
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_identity"]["status"], "not_in_source")
+        self.assertIn("player_identity", result["not_in_source"])
+
     def test_reject_mismatched_event(self):
         with self.assertRaisesRegex(ValueError, "event identity"):
             AUDIT.audit_nba_summary_capture(source(), {"event": "wrong"})
