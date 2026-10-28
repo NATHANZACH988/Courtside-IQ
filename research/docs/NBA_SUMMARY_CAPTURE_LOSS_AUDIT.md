@@ -21,6 +21,7 @@ Checks include:
 - Event identity and canonical digest of the *supplied* summary.
 - Exact equality of play-by-play, officials and team-statistic arrays when
   they are present on both sides.
+- Officials and team-statistics partial captures require an exact ordered subset of the supplied source. A shorter but altered/fabricated list is `altered_or_unreconciled`, not `partial`; extra captured records when the source list is empty are also unreconciled.
 - Play-clock and shot-coordinate comparison **bound to unique play IDs**, so a clock or shot location moved to another event is not incorrectly marked retained.
 - Partial play-by-play is accepted only for an exact, ordered subset with unique play IDs; fabricated, duplicated, or altered plays are unreconciled.
 - Player-level equality for AST, 3PT makes/attempts, STL, BLK, TO and FT

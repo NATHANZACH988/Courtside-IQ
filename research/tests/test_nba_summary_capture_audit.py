@@ -95,6 +95,62 @@ class TestCaptureLossAudit(unittest.TestCase):
                          "altered_or_unreconciled")
         self.assertFalse(result["complete_source_surface_observed"])
 
+    def test_shorter_modified_officials_are_unreconciled(self):
+        raw = source()
+        raw["officials"].append({"id": "official-2"})
+        captured = complete_capture(raw)
+        captured["officials"] = [{"id": "not-in-source"}]
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["officials"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+
+    def test_shorter_modified_team_stats_are_unreconciled(self):
+        raw = source()
+        raw["boxscore"]["teams"].append({
+            "team": {"abbreviation": "BBB"},
+            "statistics": [{"name": "assists", "displayValue": "15"}],
+        })
+        captured = complete_capture(raw)
+        captured["team_stats"] = [{
+            "team": {"abbreviation": "AAA"},
+            "statistics": [{"name": "assists", "displayValue": "999"}],
+        }]
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["team_statistics"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+
+    def test_exact_ordered_official_subset_remains_partial(self):
+        raw = source()
+        raw["officials"].append({"id": "official-2"})
+        captured = complete_capture(raw)
+        captured["officials"] = [{"id": "official-2"}]
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["officials"]
+        self.assertEqual(section["status"], "partial")
+
+    def test_exact_ordered_team_subset_remains_partial(self):
+        raw = source()
+        raw["boxscore"]["teams"].append({
+            "team": {"abbreviation": "BBB"},
+            "statistics": [{"name": "assists", "displayValue": "15"}],
+        })
+        captured = complete_capture(raw)
+        captured["team_stats"] = captured["team_stats"][1:]
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["team_statistics"]
+        self.assertEqual(section["status"], "partial")
+
+    def test_extra_official_without_source_is_unreconciled(self):
+        raw = source()
+        captured = complete_capture(raw)
+        raw["officials"] = []
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["officials"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+
+    def test_reordered_officials_are_not_retained(self):
+        raw = source()
+        raw["officials"].append({"id": "official-2"})
+        captured = complete_capture(raw)
+        captured["officials"].reverse()
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["officials"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+
     def test_partial_play_by_play(self):
         raw = source()
         captured = complete_capture(raw)

@@ -49,6 +49,35 @@ def _count(source: int, stored: int, *, equal: bool = True) -> dict:
     return {"source_items": source, "captured_items": stored, "status": status}
 
 
+def _ordered_subset_coverage(source_items: list, captured_items: list) -> dict:
+    """Only classify a shorter officials/team-stat capture as partial if exact.
+
+    Counts alone are insufficient: a shortened list may contain fabricated or
+    modified records. Preserve source order and require exact JSON equality.
+    Unlike plays, these generic surfaces have no independently validated ID.
+    """
+    source_count, captured_count = len(source_items), len(captured_items)
+    if not source_count:
+        return {"source_items": 0, "captured_items": captured_count,
+                "status": "altered_or_unreconciled" if captured_count
+                else "not_in_source"}
+    if not captured_count:
+        return _count(source_count, 0)
+    if captured_count > source_count:
+        return {"source_items": source_count, "captured_items": captured_count,
+                "status": "altered_or_unreconciled"}
+
+    cursor = 0
+    for item in captured_items:
+        while cursor < source_count and source_items[cursor] != item:
+            cursor += 1
+        if cursor == source_count:
+            return {"source_items": source_count, "captured_items": captured_count,
+                    "status": "altered_or_unreconciled"}
+        cursor += 1
+    return _count(source_count, captured_count)
+
+
 def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
     rows: dict[tuple[str, str], dict] = {}
     for group in _path(raw, "boxscore", "players") or []:
@@ -253,10 +282,8 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
     stored_teams = _first_list(captured, (("team_stats",), ("team_statistics",)))
     sections = {
         "play_by_play": _play_coverage(source_plays, stored_plays),
-        "officials": _count(len(source_officials), len(stored_officials),
-                            equal=source_officials == stored_officials),
-        "team_statistics": _count(len(source_teams), len(stored_teams),
-                                  equal=source_teams == stored_teams),
+        "officials": _ordered_subset_coverage(source_officials, stored_officials),
+        "team_statistics": _ordered_subset_coverage(source_teams, stored_teams),
     }
 
     def clock(play: Any) -> Any:
