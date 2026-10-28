@@ -164,15 +164,19 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
         if not any(present):
             continue
         captured += 1
-        if not all(present):
-            partial += 1
-            continue
-        actual = tuple(_integer(player[key]) for key in aliases)
-        if (actual == expected if label in ("3PT", "FT")
-                else len(actual) == 1 and actual[0] == expected):
-            retained += 1
-        else:
+        # A missing component is partial only if every component actually
+        # captured matches the supplied source. Otherwise a wrong make/attempt
+        # value can be laundered into an innocent-looking partial capture.
+        expected_values = expected if isinstance(expected, tuple) else (expected,)
+        actual_values = tuple(_integer(player[key]) if key in player else None
+                              for key in aliases)
+        if any(is_present and actual_values[index] != expected_values[index]
+               for index, is_present in enumerate(present)):
             altered += 1
+        elif not all(present):
+            partial += 1
+        else:
+            retained += 1
 
     if not observed:
         status = "not_in_source"
