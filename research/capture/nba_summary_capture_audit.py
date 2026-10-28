@@ -30,7 +30,7 @@ def _path(doc: dict, *keys: str | int) -> Any:
 def _first_list(doc: dict, paths: tuple[tuple[str | int, ...], ...]) -> list:
     for path in paths:
         value = _path(doc, *path)
-        if isinstance(value, list):
+        if isinstance(value, list) and value:
             return value
     return []
 
