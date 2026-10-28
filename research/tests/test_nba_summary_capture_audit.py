@@ -51,6 +51,40 @@ def complete_capture(raw):
 
 
 class TestCaptureLossAudit(unittest.TestCase):
+    def test_non_object_source_team_is_not_silently_skipped(self):
+        raw = source()
+        raw["boxscore"]["teams"].append("malformed")
+        with self.assertRaisesRegex(ValueError, "invalid source team record"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_object_valued_source_team_stats_fail_even_if_capture_matches(self):
+        raw = source()
+        raw["boxscore"]["teams"][0]["statistics"] = {"assists": "20"}
+        captured = complete_capture(raw)
+        with self.assertRaisesRegex(ValueError, "invalid source team statistics"):
+            AUDIT.audit_nba_summary_capture(raw, captured)
+
+    def test_non_object_source_team_stat_element_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["teams"][0]["statistics"].append("malformed")
+        with self.assertRaisesRegex(ValueError, "invalid source team statistic"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_source_team_with_stats_requires_identity(self):
+        raw = source()
+        raw["boxscore"]["teams"][0]["team"].pop("abbreviation")
+        with self.assertRaisesRegex(ValueError, "source team identity missing"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_empty_source_team_stats_remain_unobservable(self):
+        raw = source()
+        raw["boxscore"]["teams"][0]["statistics"] = []
+        captured = complete_capture(raw)
+        captured["team_stats"] = []
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["team_statistics"]["status"], "not_in_source")
+        self.assertFalse(result["complete_source_surface_observed"])
+
     def test_malformed_source_plays_do_not_appear_absent(self):
         raw = source()
         raw["plays"] = {"id": "p1"}
