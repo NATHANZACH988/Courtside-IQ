@@ -84,7 +84,10 @@ def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
         if not isinstance(group, dict):
             raise ValueError("invalid source player group")
         team = _path(group, "team", "abbreviation")
-        for stat_group in group.get("statistics", [])[:1]:
+        # ESPN may split a team's athletes across multiple stat groups
+        # (for example, starters and reserves). Ignoring later groups can
+        # falsely certify a full-roster capture while omitting bench players.
+        for stat_group in group.get("statistics", []):
             labels = stat_group.get("labels", [])
             if not isinstance(labels, list):
                 raise ValueError("invalid player labels")

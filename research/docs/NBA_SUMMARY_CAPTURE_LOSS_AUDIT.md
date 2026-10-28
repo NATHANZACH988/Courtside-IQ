@@ -26,6 +26,9 @@ Checks include:
 - Partial play-by-play is accepted only for an exact, ordered subset with unique play IDs; fabricated, duplicated, or altered plays are unreconciled.
 - Player-level equality for AST, 3PT makes/attempts, STL, BLK, TO and FT
   makes/attempts, matched by team abbreviation plus display name.
+- All player-stat groups for each team are reconciled, not just the first; a
+  second group containing reserves cannot be silently omitted from full-roster
+  coverage. Duplicate identities across groups fail closed.
 - Independent player-identity universe reconciliation: missing source athletes
   are partial/discarded; unexpected captured athletes are unreconciled, even
   when every source athlete's individual stat fields still match. The
