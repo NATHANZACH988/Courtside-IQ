@@ -63,6 +63,7 @@ fixtures, not purported ESPN finals.
   The separate `complete_source_surface_observed` flag remains false.
 - The generic summary shape may change. Fields not recognized by this version
   are not checked. The output does not certify comprehensive ESPN coverage.
+- Captured play, clock, or shot-coordinate evidence absent from the supplied source is flagged as unreconciled, not authenticated as a valid addition.
 - Play IDs are treated as identity keys for this offline diagnostic. Missing or duplicated IDs are classified as unreconciled rather than silently matched; this does not independently authenticate ESPN event identities.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
