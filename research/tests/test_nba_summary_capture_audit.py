@@ -145,6 +145,18 @@ class TestCaptureLossAudit(unittest.TestCase):
         self.assertEqual(result["sections"]["play_by_play"]["status"],
                          "altered_or_unreconciled")
 
+    def test_capture_with_no_source_plays_is_unreconciled(self):
+        raw = source()
+        captured = complete_capture(raw)
+        raw["plays"] = []
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_by_play"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["shot_coordinates"]["status"],
+                         "altered_or_unreconciled")
+
     def test_exact_partial_play_subset_remains_partial(self):
         raw = source()
         captured = complete_capture(raw)
