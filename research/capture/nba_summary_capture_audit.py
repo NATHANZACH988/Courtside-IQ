@@ -98,6 +98,17 @@ def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
                 values = row.get("stats", [])
                 if not isinstance(values, list):
                     raise ValueError("invalid player stats")
+                if (any(not isinstance(label, str) or not label for label in labels)
+                        or len(set(labels)) != len(labels)):
+                    raise ValueError("invalid or duplicate source stat labels")
+                # zip() silently truncates a malformed row, which can make
+                # available source stats appear absent rather than corrupted.
+                # ESPN may legitimately omit all stats for a DNP athlete.
+                if len(values) != len(labels):
+                    if not values and row.get("didNotPlay") is True:
+                        rows[key] = {}
+                        continue
+                    raise ValueError("source player labels/stats length mismatch")
                 rows[key] = dict(zip(labels, values))
     return rows
 
