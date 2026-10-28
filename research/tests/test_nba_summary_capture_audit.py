@@ -90,7 +90,9 @@ class TestCaptureLossAudit(unittest.TestCase):
         captured["officials"] = []
         result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["officials"]["status"], "not_in_source")
-        self.assertEqual(result["sections"]["play_clocks"]["status"], "not_in_source")
+        # Extra captured clocks without source events are unverified, not retained.
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
         self.assertFalse(result["complete_source_surface_observed"])
 
     def test_partial_play_by_play(self):
@@ -108,6 +110,62 @@ class TestCaptureLossAudit(unittest.TestCase):
         result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["play_by_play"]["status"],
                          "altered_or_unreconciled")
+
+    def test_fabricated_subset_play_is_not_mislabeled_partial(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["plays"] = [{"id": "fabricated", "clock": {"displayValue": "11:40"}}]
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_by_play"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
+
+    def test_coordinate_moved_to_another_play_is_not_retained(self):
+        raw = source()
+        captured = complete_capture(raw)
+        moved = captured["plays"][0].pop("coordinate")
+        captured["plays"][1]["coordinate"] = moved
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["shot_coordinates"]["status"],
+                         "altered_or_unreconciled")
+
+    def test_clock_moved_to_different_play_is_not_retained(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["plays"][0]["clock"], captured["plays"][1]["clock"] = (
+            captured["plays"][1]["clock"], captured["plays"][0]["clock"])
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
+
+    def test_duplicate_play_ids_fail_closed(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["plays"][1]["id"] = captured["plays"][0]["id"]
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_by_play"]["status"],
+                         "altered_or_unreconciled")
+
+    def test_capture_with_no_source_plays_is_unreconciled(self):
+        raw = source()
+        captured = complete_capture(raw)
+        raw["plays"] = []
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_by_play"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["play_clocks"]["status"],
+                         "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["shot_coordinates"]["status"],
+                         "altered_or_unreconciled")
+
+    def test_exact_partial_play_subset_remains_partial(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["plays"] = [copy.deepcopy(raw["plays"][1])]
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["play_by_play"]["status"], "partial")
+        self.assertEqual(result["sections"]["play_clocks"]["status"], "partial")
 
     def test_missing_coordinates_detected_even_when_plays_exist(self):
         raw = source()

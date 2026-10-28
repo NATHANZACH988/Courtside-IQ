@@ -165,6 +165,66 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
     }
 
 
+def _play_coverage(source_plays: list, stored_plays: list) -> dict:
+    """Classify a partial play capture only when every retained play is exact.
+
+    Counts alone cannot distinguish a genuine subset from fabricated or
+    altered events. A stable, unique play ID is required for reconciliation.
+    """
+    source_count, stored_count = len(source_plays), len(stored_plays)
+    if not source_count:
+        return {"source_items": 0, "captured_items": stored_count,
+                "status": "altered_or_unreconciled" if stored_count else "not_in_source"}
+    if not stored_count:
+        return _count(source_count, 0)
+    if not all(isinstance(p, dict) and p.get("id") is not None
+               for p in source_plays + stored_plays):
+        return _count(source_count, stored_count, equal=False) | {
+            "status": "altered_or_unreconciled"
+        }
+    source_ids = [str(p["id"]) for p in source_plays]
+    stored_ids = [str(p["id"]) for p in stored_plays]
+    if len(set(source_ids)) != source_count or len(set(stored_ids)) != stored_count:
+        return {"source_items": source_count, "captured_items": stored_count,
+                "status": "altered_or_unreconciled"}
+    index = {key: i for i, key in enumerate(source_ids)}
+    positions = [index.get(key) for key in stored_ids]
+    valid = (all(pos is not None for pos in positions)
+             and positions == sorted(positions)
+             and all(source_plays[pos] == play
+                     for pos, play in zip(positions, stored_plays)))
+    if not valid or stored_count > source_count:
+        return {"source_items": source_count, "captured_items": stored_count,
+                "status": "altered_or_unreconciled"}
+    return _count(source_count, stored_count)
+
+
+def _play_field_coverage(source_plays: list, stored_plays: list, extractor) -> dict:
+    """Bind a clock or coordinate to its play ID, not just its list position."""
+    source = [(str(p.get("id")) if isinstance(p, dict) else None, extractor(p))
+              for p in source_plays if extractor(p) is not None]
+    stored = [(str(p.get("id")) if isinstance(p, dict) else None, extractor(p))
+              for p in stored_plays if extractor(p) is not None]
+    if not source:
+        return {"source_items": 0, "captured_items": len(stored),
+                "status": "altered_or_unreconciled" if stored else "not_in_source"}
+    if not stored:
+        return _count(len(source), 0)
+    source_ids = [identity for identity, _ in source]
+    stored_ids = [identity for identity, _ in stored]
+    if (None in source_ids or None in stored_ids
+            or len(set(source_ids)) != len(source_ids)
+            or len(set(stored_ids)) != len(stored_ids)):
+        return {"source_items": len(source), "captured_items": len(stored),
+                "status": "altered_or_unreconciled"}
+    expected = dict(source)
+    if any(identity not in expected or expected[identity] != value
+           for identity, value in stored):
+        return {"source_items": len(source), "captured_items": len(stored),
+                "status": "altered_or_unreconciled"}
+    return _count(len(source), len(stored))
+
+
 def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
     """Compare a source summary and compact watcher output for the same game.
 
@@ -192,8 +252,7 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
     ]
     stored_teams = _first_list(captured, (("team_stats",), ("team_statistics",)))
     sections = {
-        "play_by_play": _count(len(source_plays), len(stored_plays),
-                               equal=source_plays == stored_plays),
+        "play_by_play": _play_coverage(source_plays, stored_plays),
         "officials": _count(len(source_officials), len(stored_officials),
                             equal=source_officials == stored_officials),
         "team_statistics": _count(len(source_teams), len(stored_teams),
@@ -214,10 +273,7 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
 
     for label, extractor in (("play_clocks", clock),
                              ("shot_coordinates", coordinate)):
-        source_values = [extractor(p) for p in source_plays if extractor(p) is not None]
-        stored_values = [extractor(p) for p in stored_plays if extractor(p) is not None]
-        sections[label] = _count(len(source_values), len(stored_values),
-                                 equal=source_values == stored_values)
+        sections[label] = _play_field_coverage(source_plays, stored_plays, extractor)
 
     source_players = _raw_players(raw)
     stored_players = _captured_players(captured)
