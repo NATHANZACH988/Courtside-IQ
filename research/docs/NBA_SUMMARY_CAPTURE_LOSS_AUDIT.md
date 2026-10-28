@@ -25,6 +25,10 @@ Checks include:
 - Partial play-by-play is accepted only for an exact, ordered subset with unique play IDs; fabricated, duplicated, or altered plays are unreconciled.
 - Player-level equality for AST, 3PT makes/attempts, STL, BLK, TO and FT
   makes/attempts, matched by team abbreviation plus display name.
+- Independent player-identity universe reconciliation: missing source athletes
+  are partial/discarded; unexpected captured athletes are unreconciled, even
+  when every source athlete's individual stat fields still match. The
+  identity section reports matched, missing and unexpected counts.
 - Duplicate or missing player identities, partial captures and conflicting
   same-count play data.
 - Player-stat reconciliation distinguishes **absent fields** (`discarded`),
@@ -67,7 +71,10 @@ fixtures, not purported ESPN finals.
 - Play IDs are treated as identity keys for this offline diagnostic. Missing or duplicated IDs are classified as unreconciled rather than silently matched; this does not independently authenticate ESPN event identities.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
-  traded-player identity. Ambiguous same-team names are rejected.
+  traded-player identity. Ambiguous same-team names are rejected. Unexpected
+  names are flagged as unreconciled, not automatically declared fabricated:
+  differences in naming conventions or partial source payloads require manual
+  review.
 - No sportsbook line, pricing, calibrated probability, independent source
   verification, provider license, or prospective betting result is produced.
   `player_prop_scoring_authorized` remains false.
