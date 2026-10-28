@@ -84,6 +84,12 @@ fixtures, not purported ESPN finals.
   fields through Python's truncating `zip`. An explicitly marked DNP
   athlete with an empty stat array remains a valid identity-only row.
   This is schema validation of caller-supplied data, not source attestation.
+- A **present but unparseable** source PTS/REB/AST/3PT/STL/BLK/TO/FT
+  value, including negative counts or makes exceeding attempts, raises a
+  validation error instead of being skipped as `not_in_source`. Only an
+  actually absent label is unobservable. This prevents malformed supplied
+  evidence from receiving a false complete-retention verdict; it does not
+  prove that a valid-looking source value is authentic.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
   traded-player identity. Ambiguous same-team names are rejected. Unexpected
