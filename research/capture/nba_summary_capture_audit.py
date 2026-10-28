@@ -27,10 +27,19 @@ def _path(doc: dict, *keys: str | int) -> Any:
     return cur
 
 
+def _require_list(value: Any, field: str) -> list:
+    """Do not silently treat malformed present collection surfaces as absent."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"invalid {field}: expected list")
+    return value
+
+
 def _first_list(doc: dict, paths: tuple[tuple[str | int, ...], ...]) -> list:
     for path in paths:
-        value = _path(doc, *path)
-        if isinstance(value, list) and value:
+        value = _require_list(_path(doc, *path), ".".join(map(str, path)))
+        if value:
             return value
     return []
 
@@ -80,18 +89,22 @@ def _ordered_subset_coverage(source_items: list, captured_items: list) -> dict:
 
 def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
     rows: dict[tuple[str, str], dict] = {}
-    for group in _path(raw, "boxscore", "players") or []:
+    for group in _require_list(_path(raw, "boxscore", "players"), "source player groups"):
         if not isinstance(group, dict):
             raise ValueError("invalid source player group")
         team = _path(group, "team", "abbreviation")
         # ESPN may split a team's athletes across multiple stat groups
         # (for example, starters and reserves). Ignoring later groups can
         # falsely certify a full-roster capture while omitting bench players.
-        for stat_group in group.get("statistics", []):
+        for stat_group in _require_list(group.get("statistics"), "source statistics groups"):
+            if not isinstance(stat_group, dict):
+                raise ValueError("invalid source statistics group")
             labels = stat_group.get("labels", [])
             if not isinstance(labels, list):
                 raise ValueError("invalid player labels")
-            for row in stat_group.get("athletes", []):
+            for row in _require_list(stat_group.get("athletes"), "source athletes"):
+                if not isinstance(row, dict):
+                    raise ValueError("invalid source athlete")
                 name = _path(row, "athlete", "displayName")
                 if not isinstance(team, str) or not isinstance(name, str):
                     raise ValueError("source player identity missing")
@@ -118,7 +131,7 @@ def _raw_players(raw: dict) -> dict[tuple[str, str], dict]:
 
 def _captured_players(captured: dict) -> dict[tuple[str, str], dict]:
     rows: dict[tuple[str, str], dict] = {}
-    for row in captured.get("players", []):
+    for row in _require_list(captured.get("players"), "captured players"):
         if not isinstance(row, dict):
             raise ValueError("invalid captured player")
         key = (row.get("team"), row.get("name"))
@@ -304,7 +317,7 @@ def audit_nba_summary_capture(raw: dict, captured: dict) -> dict:
         raw, (("officials",), ("header", "competitions", 0, "officials")))
     stored_officials = _first_list(captured, (("officials",),))
     source_teams = [
-        team for team in (_path(raw, "boxscore", "teams") or [])
+        team for team in _require_list(_path(raw, "boxscore", "teams"), "source teams")
         if isinstance(team, dict) and team.get("statistics")
     ]
     stored_teams = _first_list(captured, (("team_stats",), ("team_statistics",)))

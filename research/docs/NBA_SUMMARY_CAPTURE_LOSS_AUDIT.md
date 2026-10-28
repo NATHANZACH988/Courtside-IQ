@@ -69,6 +69,11 @@ fixtures, not purported ESPN finals.
 
 ## Critical limitations
 
+- Non-list values supplied for recognized play, official, team, athlete, or
+  captured-player collection surfaces fail closed instead of being treated as
+  absent. Missing/null collection paths remain unobservable; this validates
+  shape, not the authenticity or completeness of caller-supplied data.
+
 - The digest is a canonical hash of the *supplied JSON object*, **not** an
   authenticated digest of ESPN's original response bytes or a proof of
   publication/capture chronology. `source_authenticity_verified` is always
