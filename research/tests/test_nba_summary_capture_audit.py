@@ -51,6 +51,38 @@ def complete_capture(raw):
 
 
 class TestCaptureLossAudit(unittest.TestCase):
+    def test_malformed_source_plays_do_not_appear_absent(self):
+        raw = source()
+        raw["plays"] = {"id": "p1"}
+        with self.assertRaisesRegex(ValueError, "invalid plays"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_malformed_captured_officials_do_not_appear_discarded(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["officials"] = {"id": "official-1"}
+        with self.assertRaisesRegex(ValueError, "invalid officials"):
+            AUDIT.audit_nba_summary_capture(raw, captured)
+
+    def test_malformed_source_team_list_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["teams"] = {"team": "AAA"}
+        with self.assertRaisesRegex(ValueError, "invalid source teams"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_malformed_source_athlete_list_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"] = {"athlete": "Sample Player"}
+        with self.assertRaisesRegex(ValueError, "invalid source athletes"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_malformed_captured_players_fails_closed(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"] = {}
+        with self.assertRaisesRegex(ValueError, "invalid captured players"):
+            AUDIT.audit_nba_summary_capture(raw, captured)
+
     def test_unparseable_present_source_points_fail_closed(self):
         raw = source()
         raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][0] = "unknown"
