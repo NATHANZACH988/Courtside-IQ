@@ -115,5 +115,29 @@ class TestForecastTrace(unittest.TestCase):
             TRACE.verify_receipt(receipt)
 
 
+    def test_strict_json_accepts_normal_receipt(self):
+        import json
+        receipt = TRACE.seal_trace(
+            fixture(), now=datetime(2030, 10, 28, 19, 20, tzinfo=timezone.utc))
+        loaded = TRACE.load_strict_json(json.dumps(receipt))
+        self.assertEqual(TRACE.verify_receipt(loaded), receipt["trace_sha256"])
+
+    def test_strict_json_rejects_duplicate_top_level_receipt_keys(self):
+        with self.assertRaisesRegex(ValueError, "duplicate JSON object key: trace"):
+            TRACE.load_strict_json('{"trace": {}, "trace": {}}')
+
+    def test_strict_json_rejects_duplicate_nested_projection_keys(self):
+        with self.assertRaisesRegex(ValueError, "duplicate JSON object key: mean"):
+            TRACE.load_strict_json('{"trace": {"candidates": [{"mean": 999, "mean": 24}]}}')
+
+    def test_strict_json_rejects_nonstandard_nan(self):
+        with self.assertRaisesRegex(ValueError, "non-finite JSON number: NaN"):
+            TRACE.load_strict_json('{"mean": NaN}')
+
+    def test_strict_json_rejects_nonstandard_infinity(self):
+        with self.assertRaisesRegex(ValueError, "non-finite JSON number: Infinity"):
+            TRACE.load_strict_json('{"mean": Infinity}')
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,26 @@ from urllib.parse import urlparse
 SCHEMA = "courtside-forecast-trace-v1"
 
 
+def _unique_json_pairs(pairs: list[tuple[str, object]]) -> dict:
+    """Reject ambiguous JSON objects instead of silently keeping the last key."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON number: {value}")
+
+
+def load_strict_json(text: str) -> object:
+    """Parse JSON without duplicate keys or nonstandard NaN/Infinity tokens."""
+    return json.loads(text, object_pairs_hook=_unique_json_pairs,
+                      parse_constant=_reject_json_constant)
+
+
 def _digest(value: object) -> str:
     return sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
                              ensure_ascii=True, allow_nan=False).encode()).hexdigest()
@@ -209,7 +229,7 @@ def main() -> None:
     parser.add_argument("input", type=Path)
     parser.add_argument("output", nargs="?", type=Path)
     args = parser.parse_args()
-    data = json.loads(args.input.read_text(encoding="utf-8"))
+    data = load_strict_json(args.input.read_text(encoding="utf-8"))
     if args.command == "freeze":
         if args.output is None:
             parser.error("freeze requires output path")

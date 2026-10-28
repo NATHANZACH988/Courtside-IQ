@@ -16,6 +16,8 @@ python research/provenance/forecast_trace.py verify research/experiments/2026-10
 python -m unittest discover -s research/tests -p 'test_*.py' -v
 ```
 
+`freeze` and `verify` reject duplicate JSON object keys (including nested candidate/quote values) and nonstandard `NaN`/`Infinity` tokens before any digest or chronology checks. Without this guard, two parsers could interpret a receipt differently while one silently retains the last duplicate key.
+
 `freeze` creates the output exclusively (refuses overwrite), checks that sources predate forecast freeze, market captures occur after the independent projection freeze, and the receipt is sealed before tipoff. It records a deterministic SHA-256 of the complete trace and of its seal metadata. `verify` detects changes **relative to the supplied receipt**. Do not edit the frozen receipt to add results: store official final stats, sportsbook settlements, push rules, and graded errors in a separate postgame file referencing `trace_sha256` and the original quote IDs.
 
 ## Critical integrity limitations
