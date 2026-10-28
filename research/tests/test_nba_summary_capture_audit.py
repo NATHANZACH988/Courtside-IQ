@@ -385,6 +385,44 @@ class TestCaptureLossAudit(unittest.TestCase):
         self.assertEqual(result["sections"]["player_identity"]["status"], "not_in_source")
         self.assertIn("player_identity", result["not_in_source"])
 
+    def test_source_stats_shorter_than_labels_fail_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"] = ["20", "5"]
+        with self.assertRaisesRegex(ValueError, "labels/stats length mismatch"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_source_stats_longer_than_labels_fail_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"].append("99")
+        with self.assertRaisesRegex(ValueError, "labels/stats length mismatch"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_duplicate_source_stat_labels_fail_closed(self):
+        raw = source()
+        labels = raw["boxscore"]["players"][0]["statistics"][0]["labels"]
+        labels[2] = "AST"
+        with self.assertRaisesRegex(ValueError, "duplicate source stat labels"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_empty_stats_for_explicit_dnp_player_are_allowed(self):
+        raw = source()
+        dnp = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])
+        dnp["athlete"]["displayName"] = "DNP Player"
+        dnp["didNotPlay"] = True
+        dnp["stats"] = []
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"].append(dnp)
+        captured = complete_capture(raw)
+        captured["players"].append({"team": "AAA", "name": "DNP Player"})
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_identity"]["status"], "retained")
+        self.assertEqual(result["sections"]["player_ast"]["status"], "retained")
+
+    def test_empty_stats_without_dnp_marker_fail_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"] = []
+        with self.assertRaisesRegex(ValueError, "labels/stats length mismatch"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
     def test_reject_mismatched_event(self):
         with self.assertRaisesRegex(ValueError, "event identity"):
             AUDIT.audit_nba_summary_capture(source(), {"event": "wrong"})
