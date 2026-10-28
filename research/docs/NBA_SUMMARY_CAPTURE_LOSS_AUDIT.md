@@ -73,6 +73,11 @@ fixtures, not purported ESPN finals.
   are not checked. The output does not certify comprehensive ESPN coverage.
 - Captured play, clock, or shot-coordinate evidence absent from the supplied source is flagged as unreconciled, not authenticated as a valid addition.
 - Play IDs are treated as identity keys for this offline diagnostic. Missing or duplicated IDs are classified as unreconciled rather than silently matched; this does not independently authenticate ESPN event identities.
+- Source player-stat labels and values must align one-to-one with unique,
+  nonempty labels. Malformed rows fail closed instead of silently losing
+  fields through Python's truncating `zip`. An explicitly marked DNP
+  athlete with an empty stat array remains a valid identity-only row.
+  This is schema validation of caller-supplied data, not source attestation.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
   traded-player identity. Ambiguous same-team names are rejected. Unexpected
