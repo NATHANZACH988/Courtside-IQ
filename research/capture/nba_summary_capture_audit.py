@@ -172,8 +172,11 @@ def _play_coverage(source_plays: list, stored_plays: list) -> dict:
     altered events. A stable, unique play ID is required for reconciliation.
     """
     source_count, stored_count = len(source_plays), len(stored_plays)
-    if not source_count or not stored_count:
-        return _count(source_count, stored_count)
+    if not source_count:
+        return {"source_items": 0, "captured_items": stored_count,
+                "status": "altered_or_unreconciled" if stored_count else "not_in_source"}
+    if not stored_count:
+        return _count(source_count, 0)
     if not all(isinstance(p, dict) and p.get("id") is not None
                for p in source_plays + stored_plays):
         return _count(source_count, stored_count, equal=False) | {
@@ -202,8 +205,11 @@ def _play_field_coverage(source_plays: list, stored_plays: list, extractor) -> d
               for p in source_plays if extractor(p) is not None]
     stored = [(str(p.get("id")) if isinstance(p, dict) else None, extractor(p))
               for p in stored_plays if extractor(p) is not None]
-    if not source or not stored:
-        return _count(len(source), len(stored))
+    if not source:
+        return {"source_items": 0, "captured_items": len(stored),
+                "status": "altered_or_unreconciled" if stored else "not_in_source"}
+    if not stored:
+        return _count(len(source), 0)
     source_ids = [identity for identity, _ in source]
     stored_ids = [identity for identity, _ in stored]
     if (None in source_ids or None in stored_ids
