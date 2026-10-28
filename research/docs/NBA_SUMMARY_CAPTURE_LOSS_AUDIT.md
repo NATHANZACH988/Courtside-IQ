@@ -90,6 +90,15 @@ fixtures, not purported ESPN finals.
   actually absent label is unobservable. This prevents malformed supplied
   evidence from receiving a false complete-retention verdict; it does not
   prove that a valid-looking source value is authentic.
+- A **captured stat absent from the supplied source for that same athlete**
+  is `altered_or_unreconciled`, not `not_in_source`. This applies when the
+  entire source stat is absent, only one make/attempt component was captured,
+  or an explicitly marked DNP athlete has an invented box-score value.
+  Per-stat `unexpected_items` counts source-matched athletes with captured
+  values that the supplied source cannot corroborate. An absent source label
+  remains `not_in_source` only when the captured athlete also lacks that
+  value. This check detects inconsistencies, **not** deliberate fabrication
+  or the authenticity of either caller-supplied document.
 - Player identity uses team + display name, because the committed watcher
   drops ESPN athlete IDs. This is insufficient for durable cross-season or
   traded-player identity. Ambiguous same-team names are rejected. Unexpected
