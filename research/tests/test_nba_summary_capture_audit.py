@@ -73,6 +73,15 @@ class TestCaptureLossAudit(unittest.TestCase):
         self.assertFalse(result["source_authenticity_verified"])
         self.assertFalse(result["player_prop_scoring_authorized"])
 
+    def test_officials_fallback_when_top_level_is_empty(self):
+        raw = source()
+        raw["officials"] = []
+        raw["header"]["competitions"] = [{"officials": [{"id": "ref-2"}]}]
+        captured = complete_capture(raw)
+        captured["officials"] = [{"id": "ref-2"}]
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["officials"]["status"], "retained")
+
     def test_missing_source_field_is_not_called_discarded(self):
         raw = source()
         captured = complete_capture(raw)
