@@ -69,6 +69,13 @@ fixtures, not purported ESPN finals.
 
 ## Critical limitations
 
+- Source team-stat collections are validated before reconciliation: non-object
+  team records, non-list statistics, non-object statistic entries, and nonempty
+  statistics without a team abbreviation fail closed. Previously a malformed
+  team row could be silently skipped or a malformed statistics object could
+  be accepted if the capture copied it verbatim. Empty or missing statistics
+  remain unobservable; this is schema validation, not source authentication.
+
 - Non-list values supplied for recognized play, official, team, athlete, or
   captured-player collection surfaces fail closed instead of being treated as
   absent. Missing/null collection paths remain unobservable; this validates
