@@ -75,9 +75,9 @@ class TestCaptureLossAudit(unittest.TestCase):
 
     def test_missing_source_field_is_not_called_discarded(self):
         raw = source()
+        captured = complete_capture(raw)
         raw.pop("officials")
         raw["plays"] = [{"id": "p2"}]
-        captured = complete_capture(raw)
         captured["officials"] = []
         result = AUDIT.audit_nba_summary_capture(raw, captured)
         self.assertEqual(result["sections"]["officials"]["status"], "not_in_source")
