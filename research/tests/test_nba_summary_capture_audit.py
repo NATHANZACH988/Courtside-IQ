@@ -257,6 +257,43 @@ class TestCaptureLossAudit(unittest.TestCase):
         self.assertEqual(section["captured_items"], 1)
         self.assertEqual(section["altered_items"], 1)
 
+    def test_wrong_three_makes_without_attempts_is_altered(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("three_attempts")
+        captured["players"][0]["threes"] = 3  # Source is 2-6.
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_3pt"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+        self.assertEqual(section["altered_items"], 1)
+        self.assertEqual(section["partial_items"], 0)
+
+    def test_wrong_three_attempts_without_makes_is_altered(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("threes")
+        captured["players"][0]["three_attempts"] = 7  # Source is 2-6.
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_3pt"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+        self.assertEqual(section["altered_items"], 1)
+
+    def test_wrong_ft_attempts_without_makes_is_altered(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("ftm")
+        captured["players"][0]["fta"] = 6  # Source is 4-5.
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_ft"]
+        self.assertEqual(section["status"], "altered_or_unreconciled")
+        self.assertEqual(section["altered_items"], 1)
+
+    def test_correct_partial_ft_remains_partial(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("fta")
+        section = AUDIT.audit_nba_summary_capture(raw, captured)["sections"]["player_ft"]
+        self.assertEqual(section["status"], "partial")
+        self.assertEqual(section["partial_items"], 1)
+        self.assertEqual(section["altered_items"], 0)
+
     def test_mixed_retained_and_missing_players_is_partial(self):
         raw = source()
         second = copy.deepcopy(raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0])

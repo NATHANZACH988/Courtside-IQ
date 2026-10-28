@@ -38,7 +38,10 @@ Checks include:
   `captured_items` counts player rows with at least one supplied field;
   `retained_items`, `partial_items`, and `altered_items` make the
   classification auditable. Any mismatch takes precedence over a partial
-  capture; this is not a proof that the source was authentic.
+  capture, **including when only one component of a 3PT or FT make/attempt
+  pair is present**. A correctly valued single component remains `partial`;
+  an incorrect or invalid present component is `altered_or_unreconciled`.
+  This is not a proof that the source was authentic.
 
 ### Example use
 
