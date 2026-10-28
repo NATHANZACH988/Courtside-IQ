@@ -25,10 +25,10 @@ def source():
             "players": [{
                 "team": {"abbreviation": "AAA"},
                 "statistics": [{
-                    "labels": ["PTS", "AST", "3PT", "STL", "BLK", "TO", "FT"],
+                    "labels": ["PTS", "REB", "AST", "3PT", "STL", "BLK", "TO", "FT"],
                     "athletes": [{
                         "athlete": {"displayName": "Sample Player"},
-                        "stats": ["20", "5", "2-6", "1", "0", "3", "4-5"],
+                        "stats": ["20", "8", "5", "2-6", "1", "0", "3", "4-5"],
                     }],
                 }],
             }],
@@ -44,13 +44,56 @@ def complete_capture(raw):
         "team_stats": copy.deepcopy(raw["boxscore"]["teams"]),
         "players": [{
             "team": "AAA", "name": "Sample Player",
-            "pts": 20, "ast": 5, "threes": 2, "three_attempts": 6,
+            "pts": 20, "reb": 8, "ast": 5, "threes": 2, "three_attempts": 6,
             "stl": 1, "blk": 0, "to": 3, "ftm": 4, "fta": 5,
         }],
     }
 
 
 class TestCaptureLossAudit(unittest.TestCase):
+    def test_missing_points_are_detected_even_when_other_stats_match(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("pts")
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_pts"]["status"], "discarded")
+        self.assertFalse(result["available_fields_structurally_retained"])
+
+    def test_altered_points_fail_closed(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0]["pts"] = 21
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_pts"]["status"], "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["player_pts"]["altered_items"], 1)
+
+    def test_missing_rebounds_are_detected_even_when_other_stats_match(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0].pop("reb")
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_reb"]["status"], "discarded")
+        self.assertFalse(result["available_fields_structurally_retained"])
+
+    def test_altered_rebounds_fail_closed(self):
+        raw = source()
+        captured = complete_capture(raw)
+        captured["players"][0]["reb"] = 9
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_reb"]["status"], "altered_or_unreconciled")
+        self.assertEqual(result["sections"]["player_reb"]["altered_items"], 1)
+
+    def test_points_and_rebounds_retain_zero_values(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][0] = "0"
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][1] = "0"
+        captured = complete_capture(raw)
+        captured["players"][0]["pts"] = 0
+        captured["players"][0]["reb"] = 0
+        result = AUDIT.audit_nba_summary_capture(raw, captured)
+        self.assertEqual(result["sections"]["player_pts"]["status"], "retained")
+        self.assertEqual(result["sections"]["player_reb"]["status"], "retained")
+
     def test_watcher_style_compaction_discards_existing_feed(self):
         raw = source()
         compact = {"event": "nba-test-1",
