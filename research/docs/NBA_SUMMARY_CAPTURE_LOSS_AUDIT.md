@@ -26,6 +26,13 @@ Checks include:
   makes/attempts, matched by team abbreviation plus display name.
 - Duplicate or missing player identities, partial captures and conflicting
   same-count play data.
+- Player-stat reconciliation distinguishes **absent fields** (`discarded`),
+  **incomplete or partly retained fields** (`partial`), and **present but
+  mismatched/invalid values** (`altered_or_unreconciled`). Per-stat
+  `captured_items` counts player rows with at least one supplied field;
+  `retained_items`, `partial_items`, and `altered_items` make the
+  classification auditable. Any mismatch takes precedence over a partial
+  capture; this is not a proof that the source was authentic.
 
 ### Example use
 
