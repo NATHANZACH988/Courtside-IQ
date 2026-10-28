@@ -51,6 +51,39 @@ def complete_capture(raw):
 
 
 class TestCaptureLossAudit(unittest.TestCase):
+    def test_unparseable_present_source_points_fail_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][0] = "unknown"
+        with self.assertRaisesRegex(ValueError, "invalid source PTS stat"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_negative_source_rebounds_fail_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][1] = "-1"
+        with self.assertRaisesRegex(ValueError, "invalid source REB stat"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_impossible_source_three_point_pair_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][3] = "3-2"
+        with self.assertRaisesRegex(ValueError, "invalid source 3PT stat"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_invalid_source_free_throw_pair_fails_closed(self):
+        raw = source()
+        raw["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["stats"][7] = "bad"
+        with self.assertRaisesRegex(ValueError, "invalid source FT stat"):
+            AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+
+    def test_genuinely_absent_source_stat_is_unobservable(self):
+        raw = source()
+        group = raw["boxscore"]["players"][0]["statistics"][0]
+        group["labels"].pop(0)
+        group["athletes"][0]["stats"].pop(0)
+        result = AUDIT.audit_nba_summary_capture(raw, complete_capture(source()))
+        self.assertEqual(result["sections"]["player_pts"]["status"], "not_in_source")
+        self.assertFalse(result["complete_source_surface_observed"])
+
     def test_missing_points_are_detected_even_when_other_stats_match(self):
         raw = source()
         captured = complete_capture(raw)

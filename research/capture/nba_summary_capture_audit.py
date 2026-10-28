@@ -168,8 +168,11 @@ def _stat_coverage(raw_players: dict, stored_players: dict, label: str,
             continue
         expected = (_made_attempted(stats[label]) if label in ("3PT", "FT")
                     else _integer(stats[label]))
-        if expected is None:
-            continue
+        # A present but malformed source value is not an absent source field.
+        # Skipping it would mark an observable prop as not_in_source and could
+        # falsely certify the compact capture as structurally retained.
+        if expected is None or (isinstance(expected, int) and expected < 0):
+            raise ValueError(f"invalid source {label} stat for {identity}")
         observed += 1
         player = stored_players.get(identity)
         if player is None:
