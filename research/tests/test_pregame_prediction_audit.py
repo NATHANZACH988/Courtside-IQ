@@ -68,6 +68,25 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(result["declared_scheduled_games"], 2)
         self.assertFalse(result["cohort_coverage_verified"])
 
+    def test_wrong_eastern_slate_date_rejected(self):
+        d = fixture()
+        d["date"] = "2026-10-27"
+        with self.assertRaisesRegex(ValueError, "Eastern cohort date"):
+            MOD.audit(d)
+
+    def test_utc_midnight_crossing_is_valid_eastern_slate_date(self):
+        d = fixture()
+        # 02:00 UTC on Oct 29 is 22:00 EDT on Oct 28.
+        d["predictions"][0]["tip_utc"] = "2026-10-29T02:00:00Z"
+        self.assertTrue(MOD.audit(d)["chronology_claims_consistent"])
+
+    def test_next_eastern_calendar_day_rejected(self):
+        d = fixture()
+        # 04:30 UTC on Oct 29 is 00:30 EDT on Oct 29.
+        d["predictions"][0]["tip_utc"] = "2026-10-29T04:30:00Z"
+        with self.assertRaisesRegex(ValueError, "Eastern cohort date"):
+            MOD.audit(d)
+
     def test_post_tip_same_day_build_rejected(self):
         d = fixture()
         d["built_at_utc"] = d["predictions"][0]["logged_at_utc"] = "2026-10-28T23:01:00Z"
