@@ -60,7 +60,7 @@ def audit(doc):
         raise ValueError("frozen prediction document required")
     # An empty or incomplete cohort must not be reported as chronology-consistent.
     cohort_date = doc.get("date")
-    if not isinstance(cohort_date, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", cohort_date):
+    if not isinstance(cohort_date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", cohort_date):
         raise ValueError("date: YYYY-MM-DD required")
     try:
         date.fromisoformat(cohort_date)
