@@ -6,9 +6,10 @@ independently attest creation time, or certify the pregame bank cutoff.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import date, datetime
 import json
 import math
+import re
 from pathlib import Path
 
 MECHANISMS = {"FOUL_CAP": "DOWN", "CANNIBAL": "UP", "VICTIM": "DOWN", "STEADY": "UP"}
@@ -57,13 +58,24 @@ def audit(doc):
     """
     if not isinstance(doc, dict) or doc.get("frozen") is not True:
         raise ValueError("frozen prediction document required")
+    # An empty or incomplete cohort must not be reported as chronology-consistent.
+    cohort_date = doc.get("date")
+    if not isinstance(cohort_date, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", cohort_date):
+        raise ValueError("date: YYYY-MM-DD required")
+    try:
+        date.fromisoformat(cohort_date)
+    except ValueError as exc:
+        raise ValueError("date: invalid calendar date") from exc
+    scheduled_games = doc.get("games")
+    if type(scheduled_games) is not int or scheduled_games < 1:
+        raise ValueError("games: positive integer required")
     built = _timestamp(doc.get("built_at_utc"), "built_at_utc")
     banked = doc.get("finals_banked_at_build")
     if type(banked) is not int or banked < 0:
         raise ValueError("finals_banked_at_build: nonnegative integer required")
     entries = doc.get("predictions")
-    if not isinstance(entries, list):
-        raise ValueError("predictions: list required")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("predictions: nonempty list required")
     seen = set()
     events = {}
     for i, entry in enumerate(entries):
@@ -99,7 +111,10 @@ def audit(doc):
                 raise ValueError(f"{label}: event tip or teams conflict")
         else:
             events[event_id] = (tip, frozenset((team, opp)))
+    if len(events) > scheduled_games:
+        raise ValueError("games: fewer scheduled games than distinct prediction events")
     return {"entries": len(entries), "events_with_predictions": len(events),
+            "declared_scheduled_games": scheduled_games, "cohort_coverage_verified": False,
             "chronology_claims_consistent": True,
             "independent_timestamp_verified": False,
             "pregame_bank_cutoff_verified": False}
