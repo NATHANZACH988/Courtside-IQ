@@ -11,6 +11,9 @@ import json
 import math
 import re
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+NBA_SCHEDULE_TZ = ZoneInfo("America/New_York")
 
 MECHANISMS = {"FOUL_CAP": "DOWN", "CANNIBAL": "UP", "VICTIM": "DOWN", "STEADY": "UP"}
 
@@ -99,6 +102,10 @@ def audit(doc):
         _number(entry.get("banked_min_pg"), f"{label}.banked_min_pg")
         tip = _timestamp(entry.get("tip_utc"), f"{label}.tip_utc")
         logged = _timestamp(entry.get("logged_at_utc"), f"{label}.logged_at_utc")
+        # NBA slate dates are Eastern schedule dates, not UTC calendar dates.
+        # Evening US games often tip after midnight UTC on the following day.
+        if tip.astimezone(NBA_SCHEDULE_TZ).date().isoformat() != cohort_date:
+            raise ValueError(f"{label}: tip does not match Eastern cohort date")
         if not built <= logged < tip:
             raise ValueError(f"{label}: build/logged timestamp not before tip")
         ident = (event_id, team, player, mechanism)
